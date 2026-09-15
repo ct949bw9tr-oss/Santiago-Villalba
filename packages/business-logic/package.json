@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
+    "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'no lint configured for business-logic'",
     "test": "vitest run"
