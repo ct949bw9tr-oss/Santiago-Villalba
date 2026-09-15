@@ -135,7 +135,7 @@ section("Platform fees");
 for (const rule of DEFAULT_FEE_RULES) {
   emit(`insert into platform_fees (country_code, category_id, customer_fee_percent, provider_commission_percent, min_fee_amount, max_fee_amount) values
   (${s(rule.countryCode)}, null, ${rule.customerFeePercent}, ${rule.providerCommissionPercent}, ${rule.minFeeAmount}, ${n(rule.maxFeeAmount)})
-on conflict (country_code, category_id) do update set customer_fee_percent = excluded.customer_fee_percent;`);
+on conflict (country_code) where category_id is null do update set customer_fee_percent = excluded.customer_fee_percent;`);
 }
 
 // ---------- 3. providers & customers ----------

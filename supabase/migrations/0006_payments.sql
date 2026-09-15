@@ -70,9 +70,17 @@ create table platform_fees (
   max_fee_amount numeric(12,2),
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (country_code, category_id)
+  updated_at timestamptz not null default now()
 );
+-- A plain `unique (country_code, category_id)` would not prevent duplicate
+-- "applies to all categories" rows per country, because Postgres treats every
+-- NULL category_id as distinct for uniqueness purposes. Split into two partial
+-- indexes so both the per-category and the country-wide-default case are
+-- each unique (and so `on conflict (country_code, category_id)` in the seed
+-- script can actually detect a conflict for either case).
+create unique index platform_fees_country_category_uniq on platform_fees (country_code, category_id) where category_id is not null;
+create unique index platform_fees_country_default_uniq on platform_fees (country_code) where category_id is null;
+
 create trigger trg_platform_fees_updated_at before update on platform_fees
   for each row execute function set_updated_at();
 

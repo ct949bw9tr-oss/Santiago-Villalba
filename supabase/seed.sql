@@ -239,15 +239,15 @@ on conflict (subcategory_id, slug) do update set name = excluded.name;
 
 insert into platform_fees (country_code, category_id, customer_fee_percent, provider_commission_percent, min_fee_amount, max_fee_amount) values
   ('CO', null, 8, 0, 1500, 40000)
-on conflict (country_code, category_id) do update set customer_fee_percent = excluded.customer_fee_percent;
+on conflict (country_code) where category_id is null do update set customer_fee_percent = excluded.customer_fee_percent;
 
 insert into platform_fees (country_code, category_id, customer_fee_percent, provider_commission_percent, min_fee_amount, max_fee_amount) values
   ('EC', null, 8, 0, 1, null)
-on conflict (country_code, category_id) do update set customer_fee_percent = excluded.customer_fee_percent;
+on conflict (country_code) where category_id is null do update set customer_fee_percent = excluded.customer_fee_percent;
 
 insert into platform_fees (country_code, category_id, customer_fee_percent, provider_commission_percent, min_fee_amount, max_fee_amount) values
   ('US', null, 10, 5, 2, null)
-on conflict (country_code, category_id) do update set customer_fee_percent = excluded.customer_fee_percent;
+on conflict (country_code) where category_id is null do update set customer_fee_percent = excluded.customer_fee_percent;
 
 -- ===== Users: providers =====
 

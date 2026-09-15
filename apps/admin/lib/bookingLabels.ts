@@ -1,0 +1,15 @@
+export const BOOKING_STATUS_LABEL_ES: Record<string, string> = {
+  draft: "Borrador",
+  requested: "Solicitado",
+  pending_provider: "Esperando al proveedor",
+  accepted: "Aceptado",
+  provider_en_route: "Proveedor en camino",
+  in_progress: "En curso",
+  awaiting_completion_confirmation: "Esperando confirmación",
+  completed: "Completado",
+  cancelled_customer: "Cancelado por el cliente",
+  cancelled_provider: "Cancelado por el proveedor",
+  expired: "Expirado",
+  disputed: "En disputa",
+  refunded: "Reembolsado",
+};
