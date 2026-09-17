@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { uuidFrom } from "@taskswift/seed-data";
 import { Screen } from "../components/Screen";
@@ -17,14 +17,18 @@ export function LoginScreen() {
   const login = useTaskSwiftStore((s) => s.login);
   const [phone, setPhone] = useState("");
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function quickLogin(userId: string) {
     setPendingUserId(userId);
+    setError(null);
     try {
       await login(userId);
       router.replace("/");
     } catch (e) {
-      Alert.alert("No se pudo entrar", e instanceof Error ? e.message : String(e));
+      const message = e instanceof Error ? e.message : String(e);
+      console.error("quickLogin failed", e);
+      setError(message);
     } finally {
       setPendingUserId(null);
     }
@@ -77,6 +81,13 @@ export function LoginScreen() {
           )}
         </Pressable>
       ))}
+
+      {error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorTitle}>No se pudo entrar</Text>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
     </Screen>
   );
 }
@@ -118,4 +129,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: spacing.sm,
   },
+  errorBox: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: 12,
+    backgroundColor: "#FDECEC",
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorTitle: { fontWeight: "700", color: colors.danger, marginBottom: 4 },
+  errorText: { color: colors.danger },
 });
