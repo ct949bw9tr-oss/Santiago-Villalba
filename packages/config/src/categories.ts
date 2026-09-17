@@ -132,25 +132,29 @@ export const LAUNCH_CATEGORIES: SeedCategory[] = [
   },
   {
     slug: "entrenador",
-    name: "Entrenador",
-    nameEn: "Personal Trainer / Coach",
+    name: "Entrenadores",
+    nameEn: "Personal Trainers / Coaches",
     icon: "barbell",
     subcategories: [
       {
         slug: "fitness",
-        name: "Entrenador fitness",
-        nameEn: "Fitness trainer",
-        services: [
-          { slug: "sesion-fitness", name: "Sesión de entrenamiento fitness", nameEn: "Fitness training session", defaultDurationMinutes: 60 },
-        ],
+        name: "Gym",
+        nameEn: "Gym",
+        services: [{ slug: "sesion-fitness", name: "Sesión de gimnasio", nameEn: "Gym training session", defaultDurationMinutes: 60 }],
       },
       {
         slug: "futbol",
-        name: "Entrenador de fútbol",
-        nameEn: "Soccer coach",
+        name: "Fútbol",
+        nameEn: "Soccer",
         services: [
           { slug: "sesion-futbol", name: "Sesión de entrenamiento de fútbol", nameEn: "Soccer training session", defaultDurationMinutes: 60 },
         ],
+      },
+      {
+        slug: "boxeo",
+        name: "Boxeo",
+        nameEn: "Boxing",
+        services: [{ slug: "sesion-boxeo", name: "Sesión de boxeo", nameEn: "Boxing training session", defaultDurationMinutes: 60 }],
       },
     ],
   },

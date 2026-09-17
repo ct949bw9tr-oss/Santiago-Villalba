@@ -41,18 +41,18 @@ const lines: string[] = ["begin;"];
 const categoryId = uuidFrom(`category:${category.slug}`);
 const sortOrder = LAUNCH_CATEGORIES.findIndex((c) => c.slug === category.slug);
 lines.push(
-  `insert into categories (id, slug, name, name_en, icon, sort_order, is_active) values (${s(categoryId)}, ${s(category.slug)}, ${s(category.name)}, ${s(category.nameEn)}, ${s(category.icon)}, ${sortOrder}, true) on conflict (id) do nothing;`
+  `insert into categories (id, slug, name, name_en, icon, sort_order, is_active) values (${s(categoryId)}, ${s(category.slug)}, ${s(category.name)}, ${s(category.nameEn)}, ${s(category.icon)}, ${sortOrder}, true) on conflict (id) do update set name = excluded.name, name_en = excluded.name_en, icon = excluded.icon, sort_order = excluded.sort_order;`
 );
 
 category.subcategories.forEach((sub, subIndex) => {
   const subcategoryId = uuidFrom(`subcategory:${category.slug}/${sub.slug}`);
   lines.push(
-    `insert into subcategories (id, category_id, slug, name, name_en, sort_order, is_active) values (${s(subcategoryId)}, ${s(categoryId)}, ${s(sub.slug)}, ${s(sub.name)}, ${s(sub.nameEn)}, ${subIndex}, true) on conflict (id) do nothing;`
+    `insert into subcategories (id, category_id, slug, name, name_en, sort_order, is_active) values (${s(subcategoryId)}, ${s(categoryId)}, ${s(sub.slug)}, ${s(sub.name)}, ${s(sub.nameEn)}, ${subIndex}, true) on conflict (id) do update set name = excluded.name, name_en = excluded.name_en, sort_order = excluded.sort_order;`
   );
   sub.services.forEach((service) => {
     const serviceId = uuidFrom(`service:${category.slug}/${sub.slug}/${service.slug}`);
     lines.push(
-      `insert into services (id, subcategory_id, slug, name, name_en, default_duration_minutes, is_active) values (${s(serviceId)}, ${s(subcategoryId)}, ${s(service.slug)}, ${s(service.name)}, ${s(service.nameEn)}, ${service.defaultDurationMinutes ?? "null"}, true) on conflict (id) do nothing;`
+      `insert into services (id, subcategory_id, slug, name, name_en, default_duration_minutes, is_active) values (${s(serviceId)}, ${s(subcategoryId)}, ${s(service.slug)}, ${s(service.name)}, ${s(service.nameEn)}, ${service.defaultDurationMinutes ?? "null"}, true) on conflict (id) do update set name = excluded.name, name_en = excluded.name_en, default_duration_minutes = excluded.default_duration_minutes;`
     );
   });
 });
