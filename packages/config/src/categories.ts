@@ -131,6 +131,30 @@ export const LAUNCH_CATEGORIES: SeedCategory[] = [
     ],
   },
   {
+    slug: "entrenador",
+    name: "Entrenador",
+    nameEn: "Personal Trainer / Coach",
+    icon: "barbell",
+    subcategories: [
+      {
+        slug: "fitness",
+        name: "Entrenador fitness",
+        nameEn: "Fitness trainer",
+        services: [
+          { slug: "sesion-fitness", name: "Sesión de entrenamiento fitness", nameEn: "Fitness training session", defaultDurationMinutes: 60 },
+        ],
+      },
+      {
+        slug: "futbol",
+        name: "Entrenador de fútbol",
+        nameEn: "Soccer coach",
+        services: [
+          { slug: "sesion-futbol", name: "Sesión de entrenamiento de fútbol", nameEn: "Soccer training session", defaultDurationMinutes: 60 },
+        ],
+      },
+    ],
+  },
+  {
     slug: "tutorias",
     name: "Tutorías",
     nameEn: "Tutoring / Personal Services",

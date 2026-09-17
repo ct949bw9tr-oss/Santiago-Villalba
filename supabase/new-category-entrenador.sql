@@ -1,0 +1,7 @@
+begin;
+insert into categories (id, slug, name, name_en, icon, sort_order, is_active) values ('fe2553e5-fd25-5252-bc25-50bffb254f2c', 'entrenador', 'Entrenador', 'Personal Trainer / Coach', 'barbell', 4, true) on conflict (id) do nothing;
+insert into subcategories (id, category_id, slug, name, name_en, sort_order, is_active) values ('bf8d4b22-c08d-5cb5-bd8d-47fcbe8d498f', 'fe2553e5-fd25-5252-bc25-50bffb254f2c', 'fitness', 'Entrenador fitness', 'Fitness trainer', 0, true) on conflict (id) do nothing;
+insert into services (id, subcategory_id, slug, name, name_en, default_duration_minutes, is_active) values ('9214e936-9314-5ac9-9014-e6109114e7a3', 'bf8d4b22-c08d-5cb5-bd8d-47fcbe8d498f', 'sesion-fitness', U&'Sesi\00f3n de entrenamiento fitness', 'Fitness training session', 60, true) on conflict (id) do nothing;
+insert into subcategories (id, category_id, slug, name, name_en, sort_order, is_active) values ('fa487f7a-fb48-510d-b848-7c54f9487de7', 'fe2553e5-fd25-5252-bc25-50bffb254f2c', 'futbol', U&'Entrenador de f\00fatbol', 'Soccer coach', 1, true) on conflict (id) do nothing;
+insert into services (id, subcategory_id, slug, name, name_en, default_duration_minutes, is_active) values ('f1f36878-f2f3-5a0b-b3f3-6b9ef4f36d31', 'fa487f7a-fb48-510d-b848-7c54f9487de7', 'sesion-futbol', U&'Sesi\00f3n de entrenamiento de f\00fatbol', 'Soccer training session', 60, true) on conflict (id) do nothing;
+commit;

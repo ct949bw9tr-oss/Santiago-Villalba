@@ -8,6 +8,7 @@ const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   sparkle: "sparkles-outline",
   hammer: "hammer-outline",
   "book-open": "book-outline",
+  barbell: "barbell-outline",
 };
 
 export function CategoryIcon({ name, size = 22, color = colors.brand }: { name: string; size?: number; color?: string }) {
