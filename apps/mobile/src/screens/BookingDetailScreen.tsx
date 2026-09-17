@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { calculateCancellationOutcome } from "@taskswift/business-logic";
@@ -7,6 +7,7 @@ import { Screen } from "../components/Screen";
 import { Button } from "../components/Button";
 import { StatusPill } from "../components/StatusPill";
 import { Avatar } from "../components/Avatar";
+import { MapPlaceholder } from "../components/MapPlaceholder";
 import { colors, radii, spacing, typography } from "../theme";
 import { useCurrentUser, useTaskSwiftStore } from "../data";
 import { formatDateTime, formatMoney } from "../lib/format";
@@ -32,6 +33,8 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
   const confirmCompletion = useTaskSwiftStore((s) => s.confirmCompletion);
   const cancelBooking = useTaskSwiftStore((s) => s.cancelBooking);
   const [busy, setBusy] = useState(false);
+  const [cancelingActor, setCancelingActor] = useState<"customer" | "provider" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     navigation.setOptions({ title: "Detalle del servicio" });
@@ -53,28 +56,17 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
 
   async function withBusy(fn: () => Promise<unknown>) {
     setBusy(true);
+    setActionError(null);
     try {
       await fn();
     } catch (e) {
-      Alert.alert("Algo salió mal", e instanceof Error ? e.message : String(e));
+      setActionError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
   }
 
-  function confirmCancel(actor: "customer" | "provider") {
-    const outcome = calculateCancellationOutcome(booking!, actor, new Date());
-    Alert.alert(
-      "¿Cancelar servicio?",
-      outcome.cancellationFee > 0
-        ? `Se aplicará una tarifa de cancelación tardía de ${formatMoney(outcome.cancellationFee, outcome.currency)}. Reembolso: ${formatMoney(outcome.refundAmount, outcome.currency)}.`
-        : `Cancelación gratuita. Reembolso completo: ${formatMoney(outcome.refundAmount, outcome.currency)}.`,
-      [
-        { text: "Volver", style: "cancel" },
-        { text: "Cancelar servicio", style: "destructive", onPress: () => withBusy(() => cancelBooking(booking!.id, actor)) },
-      ]
-    );
-  }
+  const cancellationOutcome = cancelingActor ? calculateCancellationOutcome(booking, cancelingActor, new Date()) : null;
 
   return (
     <Screen scroll padded={false}>
@@ -103,21 +95,44 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
         </View>
       )}
 
+      {(booking.status === "provider_en_route" || booking.status === "in_progress") && (
+        <View style={styles.section}>
+          <MapPlaceholder
+            height={200}
+            pins={[
+              { id: "you", top: 60, left: 30, variant: "you" },
+              { id: "destination", top: 25, left: 70, variant: "destination", label: booking.status === "provider_en_route" ? "5 min" : undefined },
+            ]}
+          />
+        </View>
+      )}
+
       {counterpart && (
         <View style={styles.counterpartCard}>
-          <Avatar firstName={counterpart.firstName} lastName={counterpart.lastName} size={48} />
-          <View style={{ marginLeft: spacing.md, flex: 1 }}>
-            <Text style={typography.bodyStrong}>
-              {counterpart.firstName} {counterpart.lastName}
-            </Text>
-            <Text style={typography.caption}>{isProviderView ? "Cliente" : "Proveedor"}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Avatar firstName={counterpart.firstName} lastName={counterpart.lastName} size={48} />
+            <View style={{ marginLeft: spacing.md, flex: 1 }}>
+              <Text style={typography.bodyStrong}>
+                {counterpart.firstName} {counterpart.lastName}
+              </Text>
+              <Text style={typography.caption}>{isProviderView ? "Cliente" : "Proveedor"}</Text>
+            </View>
           </View>
-          <Button
-            label="Mensajes"
-            variant="secondary"
-            fullWidth={false}
-            onPress={() => router.push({ pathname: chatPathname as never, params: { bookingId: booking.id } })}
-          />
+          <View style={styles.quickActionsRow}>
+            {counterpart.phone && (
+              <QuickAction icon="call-outline" label="Llamar" onPress={() => Linking.openURL(`tel:${counterpart.phone}`)} />
+            )}
+            <QuickAction
+              icon="chatbubble-outline"
+              label="Mensaje"
+              onPress={() => router.push({ pathname: chatPathname as never, params: { bookingId: booking.id } })}
+            />
+            <QuickAction
+              icon="help-buoy-outline"
+              label="Soporte"
+              onPress={() => router.push({ pathname: chatPathname as never, params: { bookingId: booking.id } })}
+            />
+          </View>
         </View>
       )}
 
@@ -144,29 +159,61 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
         </View>
       </View>
 
-      <View style={styles.actions}>
-        {isProviderView ? (
-          <ProviderActions
-            status={booking.status}
-            busy={busy}
-            onAccept={() => withBusy(() => respondToRequest(booking.id, "accept"))}
-            onDecline={() => withBusy(() => respondToRequest(booking.id, "decline"))}
-            onEnRoute={() => withBusy(() => markEnRoute(booking.id))}
-            onStart={() => withBusy(() => startService(booking.id))}
-            onComplete={() => withBusy(() => markProviderComplete(booking.id))}
-            onCancel={() => confirmCancel("provider")}
-          />
-        ) : (
-          <CustomerActions
-            status={booking.status}
-            busy={busy}
-            alreadyReviewed={alreadyReviewed}
-            onConfirmCompletion={() => withBusy(() => confirmCompletion(booking.id))}
-            onReview={() => router.push({ pathname: "/(customer)/review/[bookingId]", params: { bookingId: booking.id } })}
-            onCancel={() => confirmCancel("customer")}
-          />
-        )}
-      </View>
+      {actionError && (
+        <View style={styles.section}>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{actionError}</Text>
+          </View>
+        </View>
+      )}
+
+      {cancelingActor && cancellationOutcome ? (
+        <View style={styles.section}>
+          <View style={styles.cancelCard}>
+            <Text style={typography.h3}>¿Cancelar servicio?</Text>
+            <Text style={[typography.body, { marginTop: spacing.xs }]}>
+              {cancellationOutcome.cancellationFee > 0
+                ? `Se aplicará una tarifa de cancelación tardía de ${formatMoney(cancellationOutcome.cancellationFee, cancellationOutcome.currency)}. Reembolso: ${formatMoney(cancellationOutcome.refundAmount, cancellationOutcome.currency)}.`
+                : `Cancelación gratuita. Reembolso completo: ${formatMoney(cancellationOutcome.refundAmount, cancellationOutcome.currency)}.`}
+            </Text>
+            <View style={styles.actionRow}>
+              <Button label="Volver" variant="outline" fullWidth={false} style={styles.halfButton} onPress={() => setCancelingActor(null)} />
+              <Button
+                label="Cancelar servicio"
+                variant="danger"
+                fullWidth={false}
+                loading={busy}
+                onPress={() => withBusy(() => cancelBooking(booking.id, cancelingActor)).then(() => setCancelingActor(null))}
+                style={styles.halfButton}
+              />
+            </View>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.actions}>
+          {isProviderView ? (
+            <ProviderActions
+              status={booking.status}
+              busy={busy}
+              onAccept={() => withBusy(() => respondToRequest(booking.id, "accept"))}
+              onDecline={() => withBusy(() => respondToRequest(booking.id, "decline"))}
+              onEnRoute={() => withBusy(() => markEnRoute(booking.id))}
+              onStart={() => withBusy(() => startService(booking.id))}
+              onComplete={() => withBusy(() => markProviderComplete(booking.id))}
+              onCancel={() => setCancelingActor("provider")}
+            />
+          ) : (
+            <CustomerActions
+              status={booking.status}
+              busy={busy}
+              alreadyReviewed={alreadyReviewed}
+              onConfirmCompletion={() => withBusy(() => confirmCompletion(booking.id))}
+              onReview={() => router.push({ pathname: "/(customer)/review/[bookingId]", params: { bookingId: booking.id } })}
+              onCancel={() => setCancelingActor("customer")}
+            />
+          )}
+        </View>
+      )}
     </Screen>
   );
 }
@@ -231,6 +278,17 @@ function CustomerActions(props: {
   return null;
 }
 
+function QuickAction({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+  return (
+    <Pressable style={styles.quickAction} onPress={onPress}>
+      <View style={styles.quickActionIcon}>
+        <Ionicons name={icon} size={18} color={colors.brand} />
+      </View>
+      <Text style={typography.tiny}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function PriceRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
     <View style={styles.priceRow}>
@@ -245,20 +303,33 @@ const styles = StyleSheet.create({
   timeline: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   timelineItem: { alignItems: "center", gap: 4, flex: 1 },
   counterpartCard: {
-    flexDirection: "row",
-    alignItems: "center",
     marginHorizontal: spacing.lg,
     marginTop: spacing.xl,
     padding: spacing.md,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: spacing.md,
+  },
+  quickActionsRow: { flexDirection: "row", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
+  quickAction: { alignItems: "center", gap: 4 },
+  quickActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.brandSoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl, gap: spacing.sm },
   priceCard: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing.md, gap: spacing.xs },
   priceRow: { flexDirection: "row", justifyContent: "space-between" },
   priceDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
   actions: { paddingHorizontal: spacing.lg, marginTop: spacing.xl, marginBottom: spacing.xxl, gap: spacing.sm },
-  actionRow: { flexDirection: "row", gap: spacing.sm },
+  actionRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
   spacedTop: { marginTop: spacing.sm },
+  cancelCard: { borderWidth: 1, borderColor: colors.danger, borderRadius: radii.lg, padding: spacing.md, marginBottom: spacing.xxl },
+  halfButton: { flex: 1 },
+  errorBox: { backgroundColor: "#FDECEC", borderWidth: 1, borderColor: colors.danger, borderRadius: radii.md, padding: spacing.md },
+  errorText: { color: colors.danger },
 });

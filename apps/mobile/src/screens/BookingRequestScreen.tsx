@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { calculatePriceBreakdown } from "@taskswift/business-logic";
@@ -22,6 +22,19 @@ const SLOTS: TimeSlot[] = [
   { label: "Pasado mañana 11:00 AM", daysFromNow: 2, hour: 11 },
 ];
 
+interface PaymentMethod {
+  id: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+const PAYMENT_METHODS: PaymentMethod[] = [
+  { id: "card", label: "Tarjeta de crédito o débito", icon: "card-outline" },
+  { id: "pse", label: "PSE / Transferencia bancaria", icon: "business-outline" },
+  { id: "nequi", label: "Nequi / Daviplata", icon: "phone-portrait-outline" },
+  { id: "wallet", label: "Apple Pay / Google Pay", icon: "logo-apple" },
+];
+
 function slotToIso(slot: TimeSlot): string {
   const d = new Date();
   d.setDate(d.getDate() + slot.daysFromNow);
@@ -40,6 +53,8 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
   const [slotIndex, setSlotIndex] = useState(0);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [paymentMethodId, setPaymentMethodId] = useState(PAYMENT_METHODS[0]!.id);
 
   const myAddresses = useMemo(() => addresses.filter((a) => a.userId === currentUser?.id), [addresses, currentUser]);
   const [addressId, setAddressId] = useState<string | undefined>(myAddresses[0]?.id);
@@ -59,6 +74,7 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
   async function submit() {
     if (!canSubmit || !selectedAddress) return;
     setSubmitting(true);
+    setError(null);
     try {
       const booking = await createBooking({
         customerId: currentUser!.id,
@@ -71,7 +87,7 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
       });
       router.replace({ pathname: "/(customer)/booking/[id]", params: { id: booking.id } });
     } catch (e) {
-      Alert.alert("No se pudo crear la reserva", e instanceof Error ? e.message : String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSubmitting(false);
     }
@@ -142,11 +158,18 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
 
       <View style={styles.section}>
         <Text style={typography.h3}>Método de pago</Text>
-        <View style={styles.paymentCard}>
-          <Ionicons name="card-outline" size={20} color={colors.textPrimary} />
-          <Text style={[typography.body, { marginLeft: spacing.sm }]}>Tarjeta terminada en 4242 (modo demo)</Text>
-          <Ionicons name="checkmark-circle" size={18} color={colors.accent} style={{ marginLeft: "auto" }} />
-        </View>
+        {PAYMENT_METHODS.map((method) => (
+          <Pressable
+            key={method.id}
+            style={[styles.paymentCard, paymentMethodId === method.id && styles.paymentCardActive]}
+            onPress={() => setPaymentMethodId(method.id)}
+          >
+            <Ionicons name={paymentMethodId === method.id ? "radio-button-on" : "radio-button-off"} size={20} color={paymentMethodId === method.id ? colors.brand : colors.textMuted} />
+            <Ionicons name={method.icon} size={20} color={colors.textPrimary} style={{ marginLeft: spacing.sm }} />
+            <Text style={[typography.body, { marginLeft: spacing.sm }]}>{method.label}</Text>
+          </Pressable>
+        ))}
+        <Text style={typography.tiny}>Modo demo: no se realizará ningún cobro real.</Text>
       </View>
 
       <View style={styles.section}>
@@ -156,7 +179,19 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
           <View style={styles.priceDivider} />
           <PriceRow label="Total" value={formatMoney(breakdown.total, breakdown.currency)} bold />
         </View>
+        <View style={styles.secureRow}>
+          <Ionicons name="lock-closed" size={12} color={colors.textMuted} />
+          <Text style={typography.tiny}>Pago 100% seguro</Text>
+        </View>
       </View>
+
+      {error && (
+        <View style={styles.section}>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        </View>
+      )}
     </Screen>
   );
 }
@@ -190,8 +225,12 @@ const styles = StyleSheet.create({
   addressCardActive: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
   notesInput: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing.md, minHeight: 72, textAlignVertical: "top" },
   attachRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  paymentCard: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing.md },
+  paymentCard: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing.md, marginBottom: spacing.sm },
+  paymentCardActive: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
   priceCard: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing.md, gap: spacing.xs },
   priceRow: { flexDirection: "row", justifyContent: "space-between" },
   priceDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
+  secureRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: spacing.sm },
+  errorBox: { backgroundColor: "#FDECEC", borderWidth: 1, borderColor: colors.danger, borderRadius: radii.md, padding: spacing.md },
+  errorText: { color: colors.danger },
 });

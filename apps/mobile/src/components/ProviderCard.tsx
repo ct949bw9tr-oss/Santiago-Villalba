@@ -27,6 +27,13 @@ export function ProviderCard({ result, onPress }: ProviderCardProps) {
         <Text style={typography.caption} numberOfLines={1}>
           {profile.headline}
         </Text>
+        <View style={styles.tagRow}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText} numberOfLines={1}>
+              {serviceName}
+            </Text>
+          </View>
+        </View>
         <View style={styles.metaRow}>
           <RatingStars rating={profile.ratingAverage} />
           <Text style={typography.caption}> · {profile.completedJobsCount} trabajos</Text>
@@ -63,6 +70,9 @@ const styles = StyleSheet.create({
   info: { flex: 1, marginLeft: spacing.md, justifyContent: "center", gap: 2 },
   nameRow: { flexDirection: "row", alignItems: "center" },
   verifiedIcon: { marginLeft: 4 },
+  tagRow: { flexDirection: "row", marginTop: 2 },
+  tag: { backgroundColor: colors.bgMuted, borderRadius: radii.sm, paddingHorizontal: 6, paddingVertical: 2 },
+  tagText: { fontSize: 11, fontWeight: "600", color: colors.textSecondary },
   metaRow: { flexDirection: "row", alignItems: "center" },
   rightCol: { justifyContent: "center", alignItems: "flex-end" },
   availableBadge: { backgroundColor: `${colors.online}22`, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radii.pill },

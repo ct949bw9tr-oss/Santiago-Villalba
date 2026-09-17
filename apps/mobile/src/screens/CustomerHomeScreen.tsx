@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Screen } from "../components/Screen";
@@ -51,11 +51,19 @@ export function CustomerHomeScreen() {
         <Text style={styles.searchPlaceholder}>¿Qué necesitas hoy?</Text>
       </Pressable>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryContent}>
+      <View style={styles.categoryGrid}>
         {categories.map((c) => (
           <CategoryCard key={c.id} category={c} onPress={() => router.push({ pathname: "/(customer)/category/[slug]", params: { slug: c.slug } })} />
         ))}
-      </ScrollView>
+      </View>
+
+      <View style={styles.trustBanner}>
+        <Ionicons name="shield-checkmark" size={28} color={colors.textInverse} />
+        <View style={{ flex: 1, marginLeft: spacing.md }}>
+          <Text style={[typography.bodyStrong, { color: colors.textInverse }]}>Personas de confianza,</Text>
+          <Text style={[typography.bodyStrong, { color: colors.textInverse }]}>siempre cerca.</Text>
+        </View>
+      </View>
 
       {lastCompleted && (
         <Pressable
@@ -70,7 +78,7 @@ export function CustomerHomeScreen() {
         </Pressable>
       )}
 
-      <SectionHeader title="Disponible ahora" actionLabel="Ver todo" onAction={() => router.push("/(customer)/search")} />
+      <SectionHeader title="Cerca de ti" actionLabel="Ver todos" onAction={() => router.push("/(customer)/search")} />
       {availableNow.length === 0 ? (
         <EmptyState icon="time-outline" title="Nadie disponible ahora" description="Prueba programar un servicio para más tarde." />
       ) : (
@@ -106,14 +114,28 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   searchPlaceholder: { color: colors.textMuted, fontSize: 15 },
-  categoryScroll: { marginTop: spacing.lg },
-  categoryContent: { paddingHorizontal: spacing.lg, gap: spacing.md },
+  categoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  trustBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.textPrimary,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    padding: spacing.lg,
+    borderRadius: 16,
+  },
   rebookCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.brand,
     marginHorizontal: spacing.lg,
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     padding: spacing.lg,
     borderRadius: 16,
   },

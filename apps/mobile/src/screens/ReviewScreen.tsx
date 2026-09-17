@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Screen } from "../components/Screen";
@@ -25,9 +25,11 @@ export function ReviewScreen({ bookingId }: { bookingId: string }) {
   if (!currentUser) return null;
 
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function submit() {
     setSubmitting(true);
+    setError(null);
     try {
       const result = await submitReview(
         bookingId,
@@ -36,12 +38,12 @@ export function ReviewScreen({ bookingId }: { bookingId: string }) {
         comment.trim() || undefined
       );
       if (!result.ok) {
-        Alert.alert("No se pudo enviar la reseña", result.reason);
+        setError(result.reason);
         return;
       }
       router.back();
     } catch (e) {
-      Alert.alert("No se pudo enviar la reseña", e instanceof Error ? e.message : String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSubmitting(false);
     }
@@ -68,6 +70,12 @@ export function ReviewScreen({ bookingId }: { bookingId: string }) {
         onChangeText={setComment}
         multiline
       />
+
+      {error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
       <Button label="Enviar reseña" onPress={submit} loading={submitting} style={styles.submit} />
     </Screen>
@@ -106,4 +114,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   submit: { marginTop: spacing.xl, marginBottom: spacing.xxl },
+  errorBox: { backgroundColor: "#FDECEC", borderWidth: 1, borderColor: colors.danger, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.lg },
+  errorText: { color: colors.danger },
 });

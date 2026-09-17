@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Screen } from "../components/Screen";
 import { Button } from "../components/Button";
-import { colors, spacing, typography } from "../theme";
+import { colors, radii, spacing, typography } from "../theme";
 import { useTaskSwiftStore } from "../data";
 
 export function OtpScreen() {
@@ -12,14 +12,16 @@ export function OtpScreen() {
   const loginOrRegisterByPhone = useTaskSwiftStore((s) => s.loginOrRegisterByPhone);
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function verify() {
     setVerifying(true);
+    setError(null);
     try {
       await loginOrRegisterByPhone(phone ?? "");
       router.replace("/");
     } catch (e) {
-      Alert.alert("No se pudo verificar", e instanceof Error ? e.message : String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setVerifying(false);
     }
@@ -41,6 +43,11 @@ export function OtpScreen() {
         onChangeText={setCode}
       />
       <Button label="Verificar" onPress={verify} disabled={code.trim().length < 6} loading={verifying} style={styles.button} />
+      {error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
       <View style={styles.resend}>
         <Text style={typography.caption}>¿No recibiste el código? </Text>
         <Text style={[typography.captionStrong, { color: colors.brand }]}>Reenviar</Text>
@@ -64,4 +71,6 @@ const styles = StyleSheet.create({
   },
   button: {},
   resend: { flexDirection: "row", justifyContent: "center", marginTop: spacing.lg },
+  errorBox: { backgroundColor: "#FDECEC", borderWidth: 1, borderColor: colors.danger, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.md },
+  errorText: { color: colors.danger },
 });

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { PricingModel } from "@taskswift/types";
 import { Screen } from "../components/Screen";
@@ -36,11 +36,13 @@ export function ProviderOnboardingScreen() {
   const availableSubcategories = subcategories.filter((sc) => sc.categoryId === categoryId);
   const availableServices = services.filter((svc) => availableSubcategories.some((sc) => sc.id === svc.subcategoryId));
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const canSubmit = !!serviceId && headline.trim().length > 2 && (pricingModel === "custom_quote" || price.trim().length > 0);
 
   async function submit() {
     if (!canSubmit || !serviceId) return;
     setSubmitting(true);
+    setError(null);
     try {
       await becomeProvider({
         userId: currentUser!.id,
@@ -53,7 +55,7 @@ export function ProviderOnboardingScreen() {
       });
       router.replace("/(provider)/(tabs)/home");
     } catch (e) {
-      Alert.alert("No se pudo publicar tu perfil", e instanceof Error ? e.message : String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSubmitting(false);
     }
@@ -112,6 +114,12 @@ export function ProviderOnboardingScreen() {
         ))}
       </View>
 
+      {error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
       <Button label="Publicar mi perfil" onPress={submit} disabled={!canSubmit} loading={submitting} style={styles.submit} />
     </Screen>
   );
@@ -133,4 +141,6 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing.md },
   multiline: { minHeight: 90, textAlignVertical: "top" },
   submit: { marginTop: spacing.xxl, marginBottom: spacing.xxl },
+  errorBox: { backgroundColor: "#FDECEC", borderWidth: 1, borderColor: colors.danger, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.xl },
+  errorText: { color: colors.danger },
 });
