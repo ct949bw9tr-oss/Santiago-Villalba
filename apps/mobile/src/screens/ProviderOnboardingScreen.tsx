@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { PricingModel } from "@taskswift/types";
 import { Screen } from "../components/Screen";
@@ -35,20 +35,28 @@ export function ProviderOnboardingScreen() {
 
   const availableSubcategories = subcategories.filter((sc) => sc.categoryId === categoryId);
   const availableServices = services.filter((svc) => availableSubcategories.some((sc) => sc.id === svc.subcategoryId));
+  const [submitting, setSubmitting] = useState(false);
   const canSubmit = !!serviceId && headline.trim().length > 2 && (pricingModel === "custom_quote" || price.trim().length > 0);
 
-  function submit() {
+  async function submit() {
     if (!canSubmit || !serviceId) return;
-    becomeProvider({
-      userId: currentUser!.id,
-      headline: headline.trim(),
-      bio: bio.trim() || undefined,
-      serviceId,
-      pricingModel,
-      price: pricingModel === "custom_quote" ? null : Number(price),
-      city: city!,
-    });
-    router.replace("/(provider)/(tabs)/home");
+    setSubmitting(true);
+    try {
+      await becomeProvider({
+        userId: currentUser!.id,
+        headline: headline.trim(),
+        bio: bio.trim() || undefined,
+        serviceId,
+        pricingModel,
+        price: pricingModel === "custom_quote" ? null : Number(price),
+        city: city!,
+      });
+      router.replace("/(provider)/(tabs)/home");
+    } catch (e) {
+      Alert.alert("No se pudo publicar tu perfil", e instanceof Error ? e.message : String(e));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -104,7 +112,7 @@ export function ProviderOnboardingScreen() {
         ))}
       </View>
 
-      <Button label="Publicar mi perfil" onPress={submit} disabled={!canSubmit} style={styles.submit} />
+      <Button label="Publicar mi perfil" onPress={submit} disabled={!canSubmit} loading={submitting} style={styles.submit} />
     </Screen>
   );
 }

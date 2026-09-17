@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Screen } from "../components/Screen";
 import { Button } from "../components/Button";
@@ -11,10 +11,18 @@ export function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const loginOrRegisterByPhone = useTaskSwiftStore((s) => s.loginOrRegisterByPhone);
   const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
-  function verify() {
-    loginOrRegisterByPhone(phone ?? "");
-    router.replace("/");
+  async function verify() {
+    setVerifying(true);
+    try {
+      await loginOrRegisterByPhone(phone ?? "");
+      router.replace("/");
+    } catch (e) {
+      Alert.alert("No se pudo verificar", e instanceof Error ? e.message : String(e));
+    } finally {
+      setVerifying(false);
+    }
   }
 
   return (
@@ -32,7 +40,7 @@ export function OtpScreen() {
         value={code}
         onChangeText={setCode}
       />
-      <Button label="Verificar" onPress={verify} disabled={code.trim().length < 6} style={styles.button} />
+      <Button label="Verificar" onPress={verify} disabled={code.trim().length < 6} loading={verifying} style={styles.button} />
       <View style={styles.resend}>
         <Text style={typography.caption}>¿No recibiste el código? </Text>
         <Text style={[typography.captionStrong, { color: colors.brand }]}>Reenviar</Text>

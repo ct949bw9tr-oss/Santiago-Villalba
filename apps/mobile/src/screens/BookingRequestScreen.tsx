@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { calculatePriceBreakdown } from "@taskswift/business-logic";
@@ -56,20 +56,25 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
   const selectedAddress = myAddresses.find((a) => a.id === addressId);
   const canSubmit = !!selectedAddress && (timing === "now" || SLOTS[slotIndex]);
 
-  function submit() {
+  async function submit() {
     if (!canSubmit || !selectedAddress) return;
     setSubmitting(true);
-    const booking = createBooking({
-      customerId: currentUser!.id,
-      providerId,
-      providerServiceId,
-      timing,
-      scheduledFor: timing === "scheduled" ? slotToIso(SLOTS[slotIndex]!) : undefined,
-      addressId: selectedAddress.id,
-      notes: notes.trim() || undefined,
-    });
-    setSubmitting(false);
-    router.replace({ pathname: "/(customer)/booking/[id]", params: { id: booking.id } });
+    try {
+      const booking = await createBooking({
+        customerId: currentUser!.id,
+        providerId,
+        providerServiceId,
+        timing,
+        scheduledFor: timing === "scheduled" ? slotToIso(SLOTS[slotIndex]!) : undefined,
+        addressId: selectedAddress.id,
+        notes: notes.trim() || undefined,
+      });
+      router.replace({ pathname: "/(customer)/booking/[id]", params: { id: booking.id } });
+    } catch (e) {
+      Alert.alert("No se pudo crear la reserva", e instanceof Error ? e.message : String(e));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

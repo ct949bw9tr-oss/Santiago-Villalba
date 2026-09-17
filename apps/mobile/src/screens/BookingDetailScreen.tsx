@@ -51,10 +51,15 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
   const isActive = !["cancelled_customer", "cancelled_provider", "expired", "refunded"].includes(booking.status);
   const isTerminalCancelled = booking.status === "cancelled_customer" || booking.status === "cancelled_provider";
 
-  async function withBusy(fn: () => void) {
+  async function withBusy(fn: () => Promise<unknown>) {
     setBusy(true);
-    fn();
-    setBusy(false);
+    try {
+      await fn();
+    } catch (e) {
+      Alert.alert("Algo salió mal", e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   function confirmCancel(actor: "customer" | "provider") {

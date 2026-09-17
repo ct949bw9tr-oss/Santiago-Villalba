@@ -1,27 +1,32 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
+import { uuidFrom } from "@taskswift/seed-data";
 import { Screen } from "../components/Screen";
 import { Button } from "../components/Button";
 import { colors, spacing, typography } from "../theme";
 import { useTaskSwiftStore } from "../data";
 
 const QUICK_LOGIN = [
-  { label: "Santiago Villalba", sublabel: "Cliente de prueba", name: "Santiago Villalba" },
-  { label: "Andrés Ramírez", sublabel: "Barbero de prueba", name: "Andrés Ramírez" },
+  { label: "Santiago Villalba", sublabel: "Cliente de prueba", userId: uuidFrom("user:customer:Santiago Villalba") },
+  { label: "Andrés Ramírez", sublabel: "Barbero de prueba", userId: uuidFrom("user:provider:Andrés Ramírez") },
 ];
 
 export function LoginScreen() {
   const router = useRouter();
   const login = useTaskSwiftStore((s) => s.login);
-  const users = useTaskSwiftStore((s) => s.users);
   const [phone, setPhone] = useState("");
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
-  function quickLogin(fullName: string) {
-    const user = users.find((u) => `${u.firstName} ${u.lastName}` === fullName);
-    if (user) {
-      login(user.id);
+  async function quickLogin(userId: string) {
+    setPendingUserId(userId);
+    try {
+      await login(userId);
       router.replace("/");
+    } catch (e) {
+      Alert.alert("No se pudo entrar", e instanceof Error ? e.message : String(e));
+    } finally {
+      setPendingUserId(null);
     }
   }
 
@@ -60,12 +65,16 @@ export function LoginScreen() {
 
       <Text style={[typography.captionStrong, styles.quickTitle]}>Acceso rápido de prueba</Text>
       {QUICK_LOGIN.map((item) => (
-        <Pressable key={item.name} style={styles.quickCard} onPress={() => quickLogin(item.name)}>
+        <Pressable key={item.userId} style={styles.quickCard} onPress={() => quickLogin(item.userId)} disabled={!!pendingUserId}>
           <View>
             <Text style={typography.bodyStrong}>{item.label}</Text>
             <Text style={typography.caption}>{item.sublabel}</Text>
           </View>
-          <Text style={{ color: colors.brand, fontWeight: "700" }}>Entrar</Text>
+          {pendingUserId === item.userId ? (
+            <ActivityIndicator color={colors.brand} />
+          ) : (
+            <Text style={{ color: colors.brand, fontWeight: "700" }}>Entrar</Text>
+          )}
         </Pressable>
       ))}
     </Screen>

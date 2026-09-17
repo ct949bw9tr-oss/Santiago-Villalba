@@ -24,18 +24,27 @@ export function ReviewScreen({ bookingId }: { bookingId: string }) {
 
   if (!currentUser) return null;
 
-  function submit() {
-    const result = submitReview(
-      bookingId,
-      currentUser!.id,
-      { overall, quality: ratings.quality, punctuality: ratings.punctuality, communication: ratings.communication, professionalism: ratings.professionalism },
-      comment.trim() || undefined
-    );
-    if (!result.ok) {
-      Alert.alert("No se pudo enviar la reseña", result.reason);
-      return;
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit() {
+    setSubmitting(true);
+    try {
+      const result = await submitReview(
+        bookingId,
+        currentUser!.id,
+        { overall, quality: ratings.quality, punctuality: ratings.punctuality, communication: ratings.communication, professionalism: ratings.professionalism },
+        comment.trim() || undefined
+      );
+      if (!result.ok) {
+        Alert.alert("No se pudo enviar la reseña", result.reason);
+        return;
+      }
+      router.back();
+    } catch (e) {
+      Alert.alert("No se pudo enviar la reseña", e instanceof Error ? e.message : String(e));
+    } finally {
+      setSubmitting(false);
     }
-    router.back();
   }
 
   return (
@@ -60,7 +69,7 @@ export function ReviewScreen({ bookingId }: { bookingId: string }) {
         multiline
       />
 
-      <Button label="Enviar reseña" onPress={submit} style={styles.submit} />
+      <Button label="Enviar reseña" onPress={submit} loading={submitting} style={styles.submit} />
     </Screen>
   );
 }
