@@ -138,7 +138,9 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
         <Text style={typography.h3}>Precio</Text>
         <View style={styles.priceCard}>
           <PriceRow label="Servicio" value={formatMoney(booking.priceBreakdown.servicePrice, booking.priceBreakdown.currency)} />
-          <PriceRow label="Tarifa TaskSwift" value={formatMoney(booking.priceBreakdown.customerFee, booking.priceBreakdown.currency)} />
+          {booking.priceBreakdown.customerFee > 0 && (
+            <PriceRow label="Tarifa TaskSwift" value={formatMoney(booking.priceBreakdown.customerFee, booking.priceBreakdown.currency)} />
+          )}
           <View style={styles.priceDivider} />
           <PriceRow label="Total" value={formatMoney(booking.priceBreakdown.total, booking.priceBreakdown.currency)} bold />
           {isProviderView && <PriceRow label="Recibes" value={formatMoney(booking.priceBreakdown.providerPayout, booking.priceBreakdown.currency)} />}

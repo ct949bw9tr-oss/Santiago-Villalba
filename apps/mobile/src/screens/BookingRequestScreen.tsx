@@ -153,7 +153,7 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
         <Text style={typography.h3}>Resumen de precio</Text>
         <View style={styles.priceCard}>
           <PriceRow label="Servicio" value={formatMoney(breakdown.servicePrice, breakdown.currency)} />
-          <PriceRow label="Tarifa TaskSwift" value={formatMoney(breakdown.customerFee, breakdown.currency)} />
+          {breakdown.customerFee > 0 && <PriceRow label="Tarifa TaskSwift" value={formatMoney(breakdown.customerFee, breakdown.currency)} />}
           <View style={styles.priceDivider} />
           <PriceRow label="Total" value={formatMoney(breakdown.total, breakdown.currency)} bold />
         </View>

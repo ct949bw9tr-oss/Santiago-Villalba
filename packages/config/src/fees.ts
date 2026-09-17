@@ -16,22 +16,21 @@ export interface DefaultFeeRule {
 export const DEFAULT_FEE_RULES: DefaultFeeRule[] = [
   {
     countryCode: "CO",
-    customerFeePercent: 8,
-    providerCommissionPercent: 0,
-    minFeeAmount: 1500,
-    maxFeeAmount: 40000,
+    customerFeePercent: 0,
+    providerCommissionPercent: 8,
+    minFeeAmount: 0,
   },
   {
     countryCode: "EC",
-    customerFeePercent: 8,
-    providerCommissionPercent: 0,
-    minFeeAmount: 1,
+    customerFeePercent: 0,
+    providerCommissionPercent: 8,
+    minFeeAmount: 0,
   },
   {
     countryCode: "US",
-    customerFeePercent: 10,
-    providerCommissionPercent: 5,
-    minFeeAmount: 2,
+    customerFeePercent: 0,
+    providerCommissionPercent: 8,
+    minFeeAmount: 0,
   },
 ];
 
