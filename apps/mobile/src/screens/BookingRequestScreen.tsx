@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { calculatePriceBreakdown } from "@taskswift/business-logic";
@@ -7,6 +7,7 @@ import { Screen } from "../components/Screen";
 import { Button } from "../components/Button";
 import { colors, radii, spacing, typography } from "../theme";
 import { useCurrentUser, useProviderBundle, useTaskSwiftStore } from "../data";
+import { createWompiCheckout } from "../data/remote";
 import { formatMoney, pricingLabel } from "../lib/format";
 
 interface TimeSlot {
@@ -26,13 +27,12 @@ interface PaymentMethod {
   id: string;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
+  comingSoon?: boolean;
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: "card", label: "Tarjeta de crédito o débito", icon: "card-outline" },
-  { id: "pse", label: "PSE / Transferencia bancaria", icon: "business-outline" },
-  { id: "nequi", label: "Nequi / Daviplata", icon: "phone-portrait-outline" },
-  { id: "wallet", label: "Apple Pay / Google Pay", icon: "logo-apple" },
+  { id: "wompi", label: "Tarjeta, PSE o Nequi (Wompi)", icon: "card-outline" },
+  { id: "wallet", label: "Apple Pay / Google Pay", icon: "logo-apple", comingSoon: true },
 ];
 
 function slotToIso(slot: TimeSlot): string {
@@ -85,7 +85,15 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
         addressId: selectedAddress.id,
         notes: notes.trim() || undefined,
       });
-      router.replace({ pathname: "/(customer)/booking/[id]", params: { id: booking.id } });
+
+      if (breakdown.total <= 0) {
+        router.replace({ pathname: "/(customer)/booking/[id]", params: { id: booking.id } });
+        return;
+      }
+
+      const redirectUrl = typeof window !== "undefined" ? window.location.origin + "/Santiago-Villalba/" : "https://ct949bw9tr-oss.github.io/Santiago-Villalba/";
+      const { checkoutUrl } = await createWompiCheckout(booking.id, redirectUrl);
+      await Linking.openURL(checkoutUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -97,7 +105,7 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
     <Screen
       scroll
       padded={false}
-      footer={<Button label="Solicitar servicio" onPress={submit} disabled={!canSubmit} loading={submitting} />}
+      footer={<Button label="Confirmar y pagar" onPress={submit} disabled={!canSubmit} loading={submitting} />}
     >
       <View style={styles.section}>
         <Text style={typography.h2}>Con {user.firstName}</Text>
@@ -161,15 +169,21 @@ export function BookingRequestScreen({ providerId, providerServiceId }: { provid
         {PAYMENT_METHODS.map((method) => (
           <Pressable
             key={method.id}
-            style={[styles.paymentCard, paymentMethodId === method.id && styles.paymentCardActive]}
+            disabled={method.comingSoon}
+            style={[
+              styles.paymentCard,
+              paymentMethodId === method.id && styles.paymentCardActive,
+              method.comingSoon && styles.paymentCardDisabled,
+            ]}
             onPress={() => setPaymentMethodId(method.id)}
           >
             <Ionicons name={paymentMethodId === method.id ? "radio-button-on" : "radio-button-off"} size={20} color={paymentMethodId === method.id ? colors.brand : colors.textMuted} />
             <Ionicons name={method.icon} size={20} color={colors.textPrimary} style={{ marginLeft: spacing.sm }} />
-            <Text style={[typography.body, { marginLeft: spacing.sm }]}>{method.label}</Text>
+            <Text style={[typography.body, { marginLeft: spacing.sm, flex: 1 }]}>{method.label}</Text>
+            {method.comingSoon && <Text style={typography.tiny}>Próximamente</Text>}
           </Pressable>
         ))}
-        <Text style={typography.tiny}>Modo demo: no se realizará ningún cobro real.</Text>
+        <Text style={typography.tiny}>Vas a completar el pago en la página segura de Wompi.</Text>
       </View>
 
       <View style={styles.section}>
@@ -227,6 +241,7 @@ const styles = StyleSheet.create({
   attachRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   paymentCard: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing.md, marginBottom: spacing.sm },
   paymentCardActive: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
+  paymentCardDisabled: { opacity: 0.5 },
   priceCard: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing.md, gap: spacing.xs },
   priceRow: { flexDirection: "row", justifyContent: "space-between" },
   priceDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },

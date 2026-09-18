@@ -707,6 +707,13 @@ export async function toggleFavoriteRemote(customerId: string, providerId: strin
   }
 }
 
+export async function createWompiCheckout(bookingId: string, redirectUrl?: string): Promise<{ checkoutUrl: string; paymentId: string }> {
+  const { data, error } = await supabase.functions.invoke("create-wompi-checkout", { body: { bookingId, redirectUrl } });
+  if (error) throw new Error(error.message ?? "No se pudo iniciar el pago");
+  if (data?.error) throw new Error(data.error);
+  return data as { checkoutUrl: string; paymentId: string };
+}
+
 export async function markNotificationsReadRemote(userId: string) {
   await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", userId).is("read_at", null);
 }
