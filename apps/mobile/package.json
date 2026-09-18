@@ -10,7 +10,11 @@
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'no lint configured for mobile'",
-    "test": "echo 'no tests for mobile yet'"
+    "test": "echo 'no tests for mobile yet'",
+    "build:preview": "eas build --profile preview --platform all --non-interactive",
+    "build:production": "eas build --profile production --platform all --non-interactive",
+    "submit:ios": "eas submit --platform ios --latest --non-interactive",
+    "submit:android": "eas submit --platform android --latest --non-interactive"
   },
   "dependencies": {
     "@taskswift/types": "workspace:*",
