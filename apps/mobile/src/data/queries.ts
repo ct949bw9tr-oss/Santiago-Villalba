@@ -9,6 +9,7 @@ export interface ProviderSearchResult {
   serviceName: string;
   categorySlug: string;
   distanceKm: number | null;
+  location: GeoPoint | null;
 }
 
 export interface ProviderSearchFilters {
@@ -34,7 +35,15 @@ export function searchProviders(filters: ProviderSearchFilters): ProviderSearchR
       if (!profile || !user || !svc || !category) return null;
       const area = state.serviceAreas.find((a) => a.providerId === service.providerId);
       const distanceKm = filters.near && area ? haversineDistanceKm(filters.near, area.center) : null;
-      return { user, profile, service, serviceName: svc.name, categorySlug: category.slug, distanceKm } satisfies ProviderSearchResult;
+      return {
+        user,
+        profile,
+        service,
+        serviceName: svc.name,
+        categorySlug: category.slug,
+        distanceKm,
+        location: area?.center ?? null,
+      } satisfies ProviderSearchResult;
     })
     .filter((r): r is ProviderSearchResult => r !== null);
 

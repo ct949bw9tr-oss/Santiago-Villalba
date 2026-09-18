@@ -7,7 +7,8 @@ import { Screen } from "../components/Screen";
 import { Button } from "../components/Button";
 import { StatusPill } from "../components/StatusPill";
 import { Avatar } from "../components/Avatar";
-import { MapPlaceholder } from "../components/MapPlaceholder";
+import { MapView } from "../components/MapView";
+import { MapMarker } from "../components/mapTypes";
 import { colors, radii, spacing, typography } from "../theme";
 import { useCurrentUser, useTaskSwiftStore } from "../data";
 import { formatDateTime, formatMoney } from "../lib/format";
@@ -26,6 +27,7 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
   const booking = useTaskSwiftStore((s) => s.bookings.find((b) => b.id === bookingId));
   const users = useTaskSwiftStore((s) => s.users);
   const reviews = useTaskSwiftStore((s) => s.reviews);
+  const serviceAreas = useTaskSwiftStore((s) => s.serviceAreas);
   const respondToRequest = useTaskSwiftStore((s) => s.respondToRequest);
   const markEnRoute = useTaskSwiftStore((s) => s.markEnRoute);
   const startService = useTaskSwiftStore((s) => s.startService);
@@ -68,6 +70,17 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
 
   const cancellationOutcome = cancelingActor ? calculateCancellationOutcome(booking, cancelingActor, new Date()) : null;
 
+  const providerArea = serviceAreas.find((a) => a.providerId === booking.providerId);
+  const trackingMarkers: MapMarker[] = [
+    ...(providerArea ? [{ id: "provider", position: providerArea.center, variant: "provider" as const }] : []),
+    {
+      id: "destination",
+      position: booking.address.location,
+      variant: "destination",
+      label: booking.status === "provider_en_route" ? "5 min" : undefined,
+    },
+  ];
+
   return (
     <Screen scroll padded={false}>
       <View style={styles.header}>
@@ -97,13 +110,7 @@ export function BookingDetailScreen({ bookingId, chatPathname }: { bookingId: st
 
       {(booking.status === "provider_en_route" || booking.status === "in_progress") && (
         <View style={styles.section}>
-          <MapPlaceholder
-            height={200}
-            pins={[
-              { id: "you", top: 60, left: 30, variant: "you" },
-              { id: "destination", top: 25, left: 70, variant: "destination", label: booking.status === "provider_en_route" ? "5 min" : undefined },
-            ]}
-          />
+          <MapView height={200} markers={trackingMarkers} />
         </View>
       )}
 

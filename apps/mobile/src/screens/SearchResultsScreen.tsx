@@ -5,7 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Screen } from "../components/Screen";
 import { ProviderCard } from "../components/ProviderCard";
 import { EmptyState } from "../components/EmptyState";
-import { MapPlaceholder, MapPin } from "../components/MapPlaceholder";
+import { MapView } from "../components/MapView";
+import { MapMarker } from "../components/mapTypes";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { Avatar } from "../components/Avatar";
 import { RatingStars } from "../components/RatingStars";
@@ -21,13 +22,6 @@ interface SearchResultsScreenProps {
 
 type FilterChip = "availableNow" | "verifiedOnly";
 type ViewMode = "list" | "map";
-
-// Deterministic pseudo-positions so the same result always lands on the same spot.
-function pinPosition(seed: string): { top: number; left: number } {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return { top: 15 + (hash % 70), left: 15 + ((hash >> 8) % 70) };
-}
 
 export function SearchResultsScreen({ initialQuery, categorySlug }: SearchResultsScreenProps) {
   const router = useRouter();
@@ -94,9 +88,11 @@ export function SearchResultsScreen({ initialQuery, categorySlug }: SearchResult
 
       {viewMode === "map" ? (
         <View style={styles.mapWrap}>
-          <MapPlaceholder
+          <MapView
             height={320}
-            pins={results.map((r): MapPin => ({ id: r.service.id, ...pinPosition(r.service.id), variant: "provider" }))}
+            markers={results
+              .filter((r) => r.location)
+              .map((r): MapMarker => ({ id: r.service.id, position: r.location!, variant: "provider" }))}
           />
           {results[0] && (
             <Pressable
