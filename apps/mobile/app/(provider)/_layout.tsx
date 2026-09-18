@@ -16,6 +16,7 @@ export default function ProviderLayout() {
       <Stack.Screen name="request/[id]" options={{ title: "Solicitud" }} />
       <Stack.Screen name="chat/[bookingId]" options={{ title: "Mensajes" }} />
       <Stack.Screen name="onboarding/index" options={{ title: "Nuevo proveedor" }} />
+      <Stack.Screen name="services/index" options={{ title: "Mis servicios" }} />
     </Stack>
   );
 }

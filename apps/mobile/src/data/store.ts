@@ -79,6 +79,13 @@ interface TaskSwiftState {
     price: number | null;
     city: string;
   }) => Promise<void>;
+  addProviderService: (input: {
+    providerId: string;
+    serviceId: string;
+    pricingModel: PricingModel;
+    price: number | null;
+  }) => Promise<void>;
+  updateProviderService: (id: string, update: { pricingModel?: PricingModel; price?: number | null; isActive?: boolean }) => Promise<void>;
   toggleOnline: (providerId: string) => Promise<void>;
   toggleAvailabilityDay: (providerId: string, dayOfWeek: number) => Promise<void>;
   addAddress: (input: Omit<Address, "id" | "createdAt" | "updatedAt">) => Promise<Address>;
@@ -240,6 +247,23 @@ export const useTaskSwiftStore = create<TaskSwiftState>((set, get) => ({
       availabilitySlots: [...state.availabilitySlots, ...newSlots],
       activeMode: "provider",
     }));
+  },
+
+  addProviderService: async (input) => {
+    const currency = get().providerServices.find((s) => s.providerId === input.providerId)?.currency ?? "COP";
+    const service = await remote.addProviderServiceRemote({
+      providerId: input.providerId,
+      serviceId: input.serviceId,
+      pricingModel: input.pricingModel,
+      price: input.price,
+      currency,
+    });
+    set((state) => ({ providerServices: [...state.providerServices, service] }));
+  },
+
+  updateProviderService: async (id, update) => {
+    const service = await remote.updateProviderServiceRemote(id, update);
+    set((state) => ({ providerServices: state.providerServices.map((s) => (s.id === id ? service : s)) }));
   },
 
   toggleOnline: async (providerId) => {

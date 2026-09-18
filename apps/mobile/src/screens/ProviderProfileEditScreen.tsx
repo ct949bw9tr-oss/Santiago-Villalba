@@ -58,7 +58,7 @@ export function ProviderProfileEditScreen() {
       <MenuRow icon="swap-horizontal-outline" label="Cambiar a modo cliente" onPress={switchToCustomerMode} />
 
       <View style={styles.section}>
-        <MenuRow icon="pricetags-outline" label="Mis servicios y precios" onPress={() => {}} />
+        <MenuRow icon="pricetags-outline" label="Mis servicios y precios" onPress={() => router.push("/(provider)/services")} />
         <MenuRow icon="images-outline" label="Portafolio" onPress={() => {}} />
         <MenuRow icon="map-outline" label="Área de servicio" onPress={() => {}} />
         <MenuRow icon="wallet-outline" label="Método de pago (payout)" onPress={() => {}} />

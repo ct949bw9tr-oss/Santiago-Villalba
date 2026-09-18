@@ -519,6 +519,44 @@ export async function fetchProviderProfile(providerId: string): Promise<Provider
   return mapProviderProfile(check(await supabase.from("provider_profiles").select("*").eq("id", providerId).single()));
 }
 
+export async function addProviderServiceRemote(input: {
+  providerId: string;
+  serviceId: string;
+  pricingModel: string;
+  price: number | null;
+  currency: string;
+  estimatedDurationMinutes?: number;
+}): Promise<ProviderService> {
+  const row = check(
+    await supabase
+      .from("provider_services")
+      .insert({
+        provider_id: input.providerId,
+        service_id: input.serviceId,
+        pricing_model: input.pricingModel,
+        price: input.price,
+        currency: input.currency,
+        estimated_duration_minutes: input.estimatedDurationMinutes ?? 45,
+        is_active: true,
+      })
+      .select()
+      .single()
+  );
+  return mapProviderService(row);
+}
+
+export async function updateProviderServiceRemote(
+  id: string,
+  update: { pricingModel?: string; price?: number | null; isActive?: boolean }
+): Promise<ProviderService> {
+  const patch: Record<string, unknown> = {};
+  if (update.pricingModel !== undefined) patch.pricing_model = update.pricingModel;
+  if (update.price !== undefined) patch.price = update.price;
+  if (update.isActive !== undefined) patch.is_active = update.isActive;
+  const row = check(await supabase.from("provider_services").update(patch).eq("id", id).select().single());
+  return mapProviderService(row);
+}
+
 export async function toggleOnlineRemote(providerId: string, isOnline: boolean) {
   await check(await supabase.from("provider_profiles").update({ is_online: isOnline }).eq("id", providerId).select().single());
 }
