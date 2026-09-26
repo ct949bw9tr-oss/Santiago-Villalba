@@ -111,7 +111,7 @@ export function ActionForm({
         )}
       </div>
       {state?.secret && <CopyField label={state.secret.label} value={state.secret.value} mono />}
-      {state?.link && <CopyField label="Comparte este enlace de acceso de un solo uso:" value={state.link} />}
+      {state?.link && <CopyField label={state.linkLabel ?? "Comparte este enlace de acceso de un solo uso:"} value={state.link} />}
       {confirmText && (
         <ConfirmModal
           open={asking}

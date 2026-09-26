@@ -46,3 +46,47 @@ export function outcomeTone(outcome: string): "success" | "warning" | "danger" |
   if (outcome === "duplicate" || outcome === "too_early") return "warning";
   return "danger";
 }
+
+export type ScanBody = {
+  outcome?: ScanOutcome;
+  feedback?: "accept" | "warn" | "reject";
+  message?: string;
+  replayed?: boolean;
+  error?: string;
+  effective_at?: string;
+  attendance?: { status: "present" | "late" | "absent" | "excused"; class_name: string; checked_in_at: string | null } | null;
+  student?: { display_name: string } | null;
+};
+
+export type ScanView = { tone: "accept" | "warn" | "reject"; title: string; hint?: string };
+
+const ERROR_LABEL: Record<string, string> = {
+  simulator_disabled: "El simulador está desactivado",
+  simulator_missing: "El colegio no tiene dispositivo simulador",
+  not_an_admin: "Solo un administrador puede usar el simulador",
+  not_signed_in: "Tu sesión expiró; vuelve a iniciar sesión",
+  invalid_token: "Este lector no está autorizado",
+  school_suspended: "Colegio suspendido",
+  missing_credentials: "Sesión no válida",
+  invalid_body: "UID de tarjeta no válido",
+  invalid_response: "Respuesta inválida del servidor",
+  "scanned_at must be within 24 hours of now": "La hora simulada debe estar dentro de las últimas/próximas 24 horas",
+};
+
+/** What to show for a scan API response (simulator and kiosk). */
+export function describeScan(body: ScanBody): ScanView {
+  if (!body.outcome) {
+    return { tone: "reject", title: ERROR_LABEL[body.error ?? ""] ?? "No se pudo registrar", hint: body.error ? `Código: ${body.error}` : undefined };
+  }
+  if (body.outcome === "recorded") {
+    const st = body.attendance?.status;
+    const title =
+      st === "late" ? "Llegada tarde registrada" : st === "absent" ? "Registrado como ausente" : st === "excused" ? "Excusa registrada" : "Asistencia registrada";
+    return { tone: st === "present" || st === "excused" ? "accept" : "warn", title };
+  }
+  return {
+    tone: body.feedback === "warn" ? "warn" : "reject",
+    title: OUTCOME_LABEL[body.outcome] ?? body.message ?? "No se pudo registrar",
+    hint: OUTCOME_HINT[body.outcome],
+  };
+}

@@ -113,3 +113,27 @@ All in one database transaction (`public.process_scan`):
 
 Every 5 minutes `finalize_due_sessions()` closes sessions past their absence
 cutoff, marking enrolled students without a record as absent.
+
+## `GET /api/v1/devices/me`
+
+Lets a reader check its token and learn what to display (used by the `/kiosk`
+screen). `Authorization: Bearer <reader token>`.
+
+- `200` → `{ "device": { "name", "status", "location", "class_name" }, "school": { "name", "timezone", "status" } }`
+- `401` → `{ "error": "invalid_token" }` (unknown, rotated or malformed token)
+
+## Card UID formats
+
+`uid` may be hex with or without separators (`04:A2:2B:1C`, `04A22B1C`) or the
+**decimal** number many keyboard-emulation USB readers type (`0012345678`,
+9+ digits). Decimal values are converted to 4/7/10-byte hex. Enroll and scan a
+card with the same kind of reader so both produce the same UID.
+
+## Classroom reader screen (`/kiosk`)
+
+A browser page for a tablet, iPad, PC or Android phone next to the classroom
+door. It stores the reader token in that browser only (set up by pasting it or
+opening `/kiosk#token=…`; the fragment is never sent to the server), accepts
+keyboard-emulation readers (UID + Enter) and Web NFC on Android Chrome, and
+queues taps while offline (same idempotency key on retry). A queued tap sent
+more than 2 minutes late counts at its arrival time, per the reader clock rule.

@@ -313,7 +313,7 @@ export default async function StudentPage({ params, searchParams }: PageProps<"/
                     Etiqueta (opcional)
                     <input name="label" maxLength={64} placeholder="Ej. Tarjeta azul #12" />
                   </label>
-                  <p className="hint">El UID viene impreso en la tarjeta o lo muestra cualquier app lectora NFC. Los dos puntos y espacios son opcionales.</p>
+                  <p className="hint">Con un lector USB conectado, haz clic en el campo y acerca la tarjeta: el UID se escribe solo. También puedes escribirlo (viene impreso en la tarjeta o lo muestra una app lectora NFC).</p>
                 </ActionForm>
               )}
               {(cards ?? []).some((c) => c.status !== "active") && (
