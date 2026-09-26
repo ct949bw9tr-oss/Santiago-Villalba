@@ -53,6 +53,8 @@ account directly instead (development only). Defaults: `--timezone America/Bogot
 
 1. **Supabase project** (use separate projects for staging and production):
    - `supabase link --project-ref <ref>` then `supabase db push` to apply migrations.
+     No CLI (e.g. on a tablet)? Paste `supabase/setup-all.sql` into Dashboard → SQL Editor and Run once
+     (regenerate it with `bash scripts/build-setup-sql.sh` after adding migrations).
    - Authentication → Sign In / Providers: **disable "Allow new users to sign up"** (accounts are invite-only).
    - Authentication → URL Configuration: Site URL = your app URL; add `<app-url>/auth/confirm` to redirect URLs.
    - Authentication → Emails: paste `supabase/templates/invite.html` and `recovery.html` into the Invite and Reset Password templates.
