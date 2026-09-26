@@ -31,15 +31,33 @@ export default async function StudentAttendance({ params }: PageProps<"/s/[schoo
       .eq("school_id", access.school.id)
       .eq("student_id", student.id)
       .order("created_at", { ascending: false })
-      .limit(50)
+      .limit(500)
       .returns<RecordRow[]>();
     if (error) throw new Error(error.message);
     records = data ?? [];
   }
 
+  const count = (st: RecordRow["status"]) => records.filter((r) => r.status === st).length;
+  const attended = count("present") + count("late");
+  const rate = attended + count("absent") ? Math.round((1000 * attended) / (attended + count("absent"))) / 10 : null;
+
   return (
     <div className="stack">
       <h1>My attendance</h1>
+      {records.length > 0 && (
+        <section className="grid">
+          <div className="card">
+            <div className="muted">Attendance rate</div>
+            <div className="stat">{rate === null ? "—" : `${rate}%`}</div>
+          </div>
+          {(["present", "late", "absent", "excused"] as const).map((st) => (
+            <div key={st} className="card">
+              <div className="muted">{st[0].toUpperCase() + st.slice(1)}</div>
+              <div className="stat">{count(st)}</div>
+            </div>
+          ))}
+        </section>
+      )}
       {!student ? (
         <div className="card muted">Your account is not linked to a student record yet.</div>
       ) : records.length === 0 ? (

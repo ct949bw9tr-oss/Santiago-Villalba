@@ -1,6 +1,6 @@
 # School Attendance SaaS — Architecture (v0.2)
 
-Status: **approved; Phases 1–4 implemented** (see §7 and §8 for what was built
+Status: **approved; Phases 1–5 implemented** (see §7 and §8 for what was built
 and the decisions taken).
 
 Scope: a multi-school (multi-tenant) SaaS that records class attendance from
@@ -523,6 +523,11 @@ can be revisited.
   serialization failures and the request would hang. Teachers can read the
   audit trail of their own classes' records. The session page refreshes via
   Supabase Realtime with a 10-second polling fallback.
+* Phase 5 — report aggregates are SQL functions with SECURITY INVOKER, so RLS
+  decides what is counted (admins: school; teachers: own classes). Attendance
+  rate = (present + late) / (present + late + absent); excused is excluded.
+  The CSV export pages through PostgREST 1000 rows at a time (Supabase's
+  default max), adds a UTF-8 BOM for Excel and neutralizes formula cells.
 * Supabase-specific: every new table must revoke the default `anon` /
   `authenticated` grants (Supabase adds them automatically).
 * Queries must filter by the active `school_id` even though RLS already
