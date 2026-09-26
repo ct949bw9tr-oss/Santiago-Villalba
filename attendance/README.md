@@ -5,9 +5,10 @@ TypeScript) + Supabase (Postgres, Auth, RLS), deployed on Vercel.
 
 Design, API contract and roadmap: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
-**Status: Phase 1 complete** — schema, tenant isolation, authentication and
-role-based areas. Admin management screens (Phase 2), the attendance engine,
-scan API and NFC simulator (Phase 3) come next.
+**Status: Phase 2 complete** — schema, tenant isolation, authentication, and
+the admin screens (students, teachers with invite links, courses, classes,
+weekly schedules, enrollments, NFC cards, attendance rules). Next: the
+attendance engine, scan API and NFC simulator (Phase 3).
 
 ## What's here
 
@@ -54,7 +55,10 @@ account directly instead (development only). Defaults: `--timezone America/Bogot
 1. **Supabase project** (use separate projects for staging and production):
    - `supabase link --project-ref <ref>` then `supabase db push` to apply migrations.
      No CLI (e.g. on a tablet)? Paste `supabase/setup-all.sql` into Dashboard → SQL Editor and Run once
-     (regenerate it with `bash scripts/build-setup-sql.sh` after adding migrations).
+     (regenerate it with `bash scripts/build-setup-sql.sh` after adding migrations). For an existing
+     project, run only the migrations it doesn't have yet, in order.
+   - Teacher invitations produce a one-time sign-in link for the admin to share, so no SMTP setup is
+     needed. Set `APP_URL` (e.g. `https://your-app.vercel.app`) if links should use a fixed domain.
    - Authentication → Sign In / Providers: **disable "Allow new users to sign up"** (accounts are invite-only).
    - Authentication → URL Configuration: Site URL = your app URL; add `<app-url>/auth/confirm` to redirect URLs.
    - Authentication → Emails: paste `supabase/templates/invite.html` and `recovery.html` into the Invite and Reset Password templates.
