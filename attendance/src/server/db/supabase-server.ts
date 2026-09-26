@@ -9,8 +9,10 @@ import { publicEnv } from "@/lib/env";
  * for everything a human does.
  */
 export async function createSupabaseServerClient() {
-  const env = publicEnv();
+  // Read cookies first: it marks the route as dynamic, so `next build` never
+  // tries to prerender pages (and never needs runtime env vars).
   const cookieStore = await cookies();
+  const env = publicEnv();
 
   return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
