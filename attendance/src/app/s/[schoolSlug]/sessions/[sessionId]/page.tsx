@@ -1,13 +1,21 @@
-import Link from "next/link";
+import { CheckCircle2, Clock, History, Pencil, UserX, Users } from "lucide-react";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/action-form";
 import { SchoolSlugInput } from "@/components/school-slug-input";
 import { hasRole } from "@/lib/auth/roles";
-import { formatLocalDate, formatLocalTime, localDateKey } from "@/lib/time";
+import { localDateKey } from "@/lib/time";
+import { fmtLongDate, fmtTime, SOURCE_LABEL } from "@/lib/ui/format";
 import { correctAttendance } from "@/server/attendance/corrections";
 import { requireSchoolAccess } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { LiveRefresh } from "./live-refresh";
+import { Person } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { KpiCard } from "@/components/ui/kpi-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBar } from "@/components/ui/rate";
+import { Badge, StatusBadge } from "@/components/ui/status-badge";
 
 type Status = "present" | "late" | "absent" | "excused";
 type Rule = { early_checkin_minutes: number; late_after_minutes: number; absent_after_minutes: number };
@@ -42,9 +50,7 @@ type AuditRow = {
   reason: string | null;
 };
 
-const STATUS_LABEL: Record<Status, string> = { present: "Present", late: "Late", absent: "Absent", excused: "Excused" };
-const STATUS_COLOR: Record<Status, string> = { present: "#2e7d32", late: "#b26a00", absent: "#b3261e", excused: "#1565c0" };
-const SOURCE_LABEL = { nfc: "card", manual: "changed by staff", system: "automatic" } as const;
+const STATUS_LABEL: Record<Status, string> = { present: "Presente", late: "Tarde", absent: "Ausente", excused: "Excusado" };
 
 function addMinutes(iso: string, minutes: number) {
   return new Date(new Date(iso).getTime() + minutes * 60_000);
@@ -124,11 +130,11 @@ export default async function SessionPage({ params }: PageProps<"/s/[schoolSlug]
     ? await supabase.from("profiles").select("id, full_name, email").in("id", actorIds)
     : { data: [] as { id: string; full_name: string; email: string | null }[] };
   const actorName = (a: AuditRow) => {
-    if (a.actor_type === "device") return "Card reader";
-    if (a.actor_type === "system") return "Automatic";
-    if (a.actor_user_id === access.user.id) return "You";
+    if (a.actor_type === "device") return "Lector NFC";
+    if (a.actor_type === "system") return "Automático";
+    if (a.actor_user_id === access.user.id) return "Tú";
     const p = (actors ?? []).find((x) => x.id === a.actor_user_id);
-    return p?.full_name || p?.email || "School staff";
+    return p?.full_name || p?.email || "Personal del colegio";
   };
   const recordStudent = new Map((records ?? []).map((r) => [r.id, r.student]));
 
@@ -139,149 +145,130 @@ export default async function SessionPage({ params }: PageProps<"/s/[schoolSlug]
     else counts.pending++;
   }
   const backHref = isAdmin ? `/s/${schoolSlug}/admin/classes/${session.class.id}` : `/s/${schoolSlug}/teacher`;
+  const room = session.room ?? session.class.room;
 
   return (
-    <div className="stack">
-      <p style={{ margin: 0 }}>
-        <Link href={backHref}>← Back</Link>
-      </p>
-      <div className="section-head">
-        <div>
-          <h1>{session.class.name}</h1>
-          <p className="muted" style={{ margin: 0 }}>
-            {formatLocalDate(session.starts_at, tz)} · {formatLocalTime(session.starts_at, tz)}–
-            {formatLocalTime(session.ends_at, tz)}
-            {(session.room ?? session.class.room) && ` · Room ${session.room ?? session.class.room}`}
-          </p>
-        </div>
-        {session.status === "cancelled" ? <span className="badge">Cancelled</span> : <LiveRefresh sessionId={session.id} />}
-      </div>
+    <div className="stack-lg">
+      <PageHeader
+        back={{ href: backHref, label: isAdmin ? "Clase" : "Mis clases" }}
+        title={session.class.name}
+        subtitle={`${fmtLongDate(session.starts_at, tz)} · ${fmtTime(session.starts_at, tz)} – ${fmtTime(session.ends_at, tz)}${room ? ` · Salón ${room}` : ""}`}
+        actions={session.status === "cancelled" ? <Badge tone="danger">Cancelada</Badge> : <LiveRefresh sessionId={session.id} />}
+      />
 
       {rule && (
-        <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-          On time until <strong>{formatLocalTime(addMinutes(session.starts_at, rule.late_after_minutes), tz)}</strong> ·
-          late until <strong>{formatLocalTime(addMinutes(session.starts_at, rule.absent_after_minutes), tz)}</strong>
-          {session.finalized_at ? " · absences recorded" : " · students without a tap are marked absent after that"}
-        </p>
+        <div className="callout info">
+          <Clock size={17} />
+          <p>
+            A tiempo hasta las <strong>{fmtTime(addMinutes(session.starts_at, rule.late_after_minutes), tz)}</strong> · tarde hasta las{" "}
+            <strong>{fmtTime(addMinutes(session.starts_at, rule.absent_after_minutes), tz)}</strong>
+            {session.finalized_at ? " · ausencias ya registradas" : " · después, quienes no hayan registrado lectura quedan ausentes"}
+          </p>
+        </div>
       )}
 
-      <section className="grid">
-        {(
-          [
-            ["Present", counts.present, STATUS_COLOR.present],
-            ["Late", counts.late, STATUS_COLOR.late],
-            ["Absent", counts.absent, STATUS_COLOR.absent],
-            ["Excused", counts.excused, STATUS_COLOR.excused],
-            ["Not yet", counts.pending, "var(--muted)"],
-          ] as const
-        ).map(([label, n, color]) => (
-          <div key={label} className="card">
-            <div className="muted">{label}</div>
-            <div className="stat" style={{ color }}>
-              {n}
-            </div>
-          </div>
-        ))}
+      <section className="grid-kpi">
+        <KpiCard icon={CheckCircle2} tone="green" value={counts.present} label="Presentes" />
+        <KpiCard icon={Clock} tone="orange" value={counts.late} label="Tarde" />
+        <KpiCard icon={UserX} tone="red" value={counts.absent} label="Ausentes" foot={counts.excused ? `${counts.excused} excusados` : undefined} />
+        <KpiCard icon={Users} tone="gray" value={counts.pending} label="Sin registrar" foot={`de ${roster.length} estudiantes`} />
       </section>
 
-      <section className="card stack">
-        <h2>Students ({roster.length})</h2>
-        {roster.length === 0 ? (
-          <p className="muted">No students are enrolled in this class.</p>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Status</th>
-                  <th>Checked in</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {roster.map((s) => {
-                  const r = recordByStudent.get(s.id);
-                  return (
-                    <tr key={s.id}>
-                      <td>
-                        {s.last_name}, {s.first_name}
-                        <div className="muted" style={{ fontSize: "0.8rem" }}>
-                          {s.student_number}
-                        </div>
-                      </td>
-                      <td>
-                        {r ? (
+      <div className="grid-main">
+        <Card title={`Estudiantes (${roster.length})`} action={<div style={{ width: 160 }}><StatusBar {...counts} /></div>}>
+          {roster.length === 0 ? (
+            <EmptyState icon={Users} title="No hay estudiantes inscritos en esta clase" compact />
+          ) : (
+            <ul className="list">
+              {roster.map((s) => {
+                const r = recordByStudent.get(s.id);
+                return (
+                  <li key={s.id} className="list-item" style={{ flexWrap: "wrap" }}>
+                    <div className="grow" style={{ minWidth: 180 }}>
+                      <Person
+                        first={s.first_name}
+                        last={s.last_name}
+                        id={s.id}
+                        size="sm"
+                        sub={
+                          r
+                            ? `${r.checked_in_at ? `Llegó ${fmtTime(r.checked_in_at, tz)} · ` : ""}${SOURCE_LABEL[r.source]}${r.source === "manual" && r.note ? `: ${r.note}` : ""}`
+                            : s.student_number
+                        }
+                      />
+                    </div>
+                    <StatusBadge status={r?.status} />
+                    <details className="popover">
+                      <summary className="button ghost small" aria-label={`Cambiar asistencia de ${s.first_name}`}>
+                        <Pencil size={14} /> Cambiar
+                      </summary>
+                      <div className="popover-panel">
+                        <ActionForm action={correctAttendance} submitLabel="Guardar" className="stack-sm small">
+                          <SchoolSlugInput slug={schoolSlug} />
+                          <input type="hidden" name="sessionId" value={session.id} />
+                          <input type="hidden" name="studentId" value={s.id} />
+                          {r && <input type="hidden" name="expectedVersion" value={r.version} />}
+                          <label>
+                            Nuevo estado
+                            <select name="status" defaultValue={r?.status ?? "present"}>
+                              <option value="present">Presente</option>
+                              <option value="late">Tarde</option>
+                              <option value="absent">Ausente</option>
+                              <option value="excused">Excusado</option>
+                            </select>
+                          </label>
+                          <label>
+                            Motivo
+                            <input name="reason" required minLength={3} maxLength={500} placeholder="Obligatorio" />
+                          </label>
+                        </ActionForm>
+                      </div>
+                    </details>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card title="Historial" subtitle="Cada cambio queda auditado">
+          {(audit ?? []).length === 0 ? (
+            <EmptyState icon={History} title="Aún no hay asistencia registrada" compact />
+          ) : (
+            <ul className="list">
+              {(audit ?? []).map((a) => {
+                const st = recordStudent.get(a.entity_id);
+                const from = a.before?.status;
+                const to = a.after?.status;
+                return (
+                  <li key={a.id} className="list-item" style={{ alignItems: "flex-start" }}>
+                    <span className={`feed-icon ${a.actor_type === "user" ? "tone-violet" : a.actor_type === "device" ? "tone-blue" : "tone-gray"}`}>
+                      {a.actor_type === "user" ? <Pencil size={14} /> : <CheckCircle2 size={15} />}
+                    </span>
+                    <div className="grow small-text" style={{ minWidth: 0 }}>
+                      <div>
+                        <strong>{st ? `${st.first_name} ${st.last_name}` : "Estudiante"}</strong>:{" "}
+                        {from && to && from !== to ? (
                           <>
-                            <strong style={{ color: STATUS_COLOR[r.status] }}>{STATUS_LABEL[r.status]}</strong>
-                            <div className="muted" style={{ fontSize: "0.8rem" }}>
-                              {SOURCE_LABEL[r.source]}
-                              {r.source === "manual" && r.note ? `: ${r.note}` : ""}
-                            </div>
+                            {STATUS_LABEL[from]} → {STATUS_LABEL[to]}
                           </>
                         ) : (
-                          <span className="muted">Not yet</span>
+                          to && STATUS_LABEL[to]
                         )}
-                      </td>
-                      <td>{r?.checked_in_at ? formatLocalTime(r.checked_in_at, tz) : "—"}</td>
-                      <td>
-                        <details>
-                          <summary style={{ cursor: "pointer" }}>Change</summary>
-                          <ActionForm action={correctAttendance} submitLabel="Save" className="stack small">
-                            <SchoolSlugInput slug={schoolSlug} />
-                            <input type="hidden" name="sessionId" value={session.id} />
-                            <input type="hidden" name="studentId" value={s.id} />
-                            {r && <input type="hidden" name="expectedVersion" value={r.version} />}
-                            <select name="status" defaultValue={r?.status ?? "present"} aria-label="New status">
-                              <option value="present">Present</option>
-                              <option value="late">Late</option>
-                              <option value="absent">Absent</option>
-                              <option value="excused">Excused</option>
-                            </select>
-                            <input name="reason" required minLength={3} maxLength={500} placeholder="Reason (required)" />
-                          </ActionForm>
-                        </details>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="card stack">
-        <h2>History</h2>
-        {(audit ?? []).length === 0 ? (
-          <p className="muted">No attendance recorded yet.</p>
-        ) : (
-          <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0, gap: "0.5rem" }}>
-            {(audit ?? []).map((a) => {
-              const st = recordStudent.get(a.entity_id);
-              const from = a.before?.status;
-              const to = a.after?.status;
-              return (
-                <li key={a.id}>
-                  <span className="muted">{formatLocalTime(a.created_at, tz)}</span> ·{" "}
-                  <strong>{st ? `${st.first_name} ${st.last_name}` : "Student"}</strong>:{" "}
-                  {from && to && from !== to ? (
-                    <>
-                      {STATUS_LABEL[from]} → {STATUS_LABEL[to]}
-                    </>
-                  ) : (
-                    to && STATUS_LABEL[to]
-                  )}{" "}
-                  <span className="muted">
-                    by {actorName(a)}
-                    {a.reason && a.actor_type === "user" ? ` — “${a.reason}”` : ""}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+                      </div>
+                      <div className="cell-sub">
+                        por {actorName(a)}
+                        {a.reason && a.actor_type === "user" ? ` — “${a.reason}”` : ""}
+                      </div>
+                    </div>
+                    <span className="feed-time">{fmtTime(a.created_at, tz)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

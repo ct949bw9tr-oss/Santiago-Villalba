@@ -18,8 +18,8 @@ export async function updateDefaultRule(_prev: FormState, formData: FormData): P
     .eq("is_default", true)
     .select("id");
   if (error) return { error: dbErrorMessage(error) };
-  if (!data?.length) return { error: "This school has no default rule." };
+  if (!data?.length) return { error: "Este colegio no tiene regla por defecto." };
 
   refresh();
-  return { message: "Attendance rules saved. They apply to sessions that haven't started yet." };
+  return { message: "Reglas guardadas. Aplican a las clases que aún no han empezado." };
 }

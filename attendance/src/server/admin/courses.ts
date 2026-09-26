@@ -12,17 +12,17 @@ export async function createCourse(_prev: FormState, formData: FormData): Promis
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("courses").insert({ ...parsed.data, school_id: access.school.id });
-  if (error) return { error: dbErrorMessage(error, { unique: "A course with that code already exists." }) };
+  if (error) return { error: dbErrorMessage(error, { unique: "Ya existe un curso con ese código." }) };
 
   refresh();
-  return { message: `${parsed.data.name} added.` };
+  return { message: `${parsed.data.name} fue agregado.` };
 }
 
 export async function updateCourse(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("courseId"));
   const parsed = courseSchema.safeParse(Object.fromEntries(formData));
-  if (!id.success) return { error: "Unknown course." };
+  if (!id.success) return { error: "Curso desconocido." };
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 
   const supabase = await createSupabaseServerClient();
@@ -32,9 +32,9 @@ export async function updateCourse(_prev: FormState, formData: FormData): Promis
     .eq("id", id.data)
     .eq("school_id", access.school.id)
     .select("id");
-  if (error) return { error: dbErrorMessage(error, { unique: "Another course already has that code." }) };
-  if (!data?.length) return { error: "Unknown course." };
+  if (error) return { error: dbErrorMessage(error, { unique: "Otro curso ya tiene ese código." }) };
+  if (!data?.length) return { error: "Curso desconocido." };
 
   refresh();
-  return { message: "Saved." };
+  return { message: "Cambios guardados." };
 }

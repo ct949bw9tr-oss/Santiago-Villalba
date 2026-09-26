@@ -22,16 +22,16 @@ type PgError = { code?: string; message: string } | null;
 export function dbErrorMessage(error: PgError, messages: { unique?: string; foreignKey?: string } = {}): string {
   switch (error?.code) {
     case "23505":
-      return messages.unique ?? "That already exists.";
+      return messages.unique ?? "Eso ya existe.";
     case "23503":
-      return messages.foreignKey ?? "A referenced record doesn't exist in this school.";
+      return messages.foreignKey ?? "Uno de los registros indicados no existe en este colegio.";
     case "23514":
-      return "Some values are out of range.";
+      return "Algunos valores están fuera de rango.";
     case "42501":
-      return "You don't have permission to do that.";
+      return "No tienes permiso para hacer eso.";
     default:
       console.error("admin action failed", error);
-      return "Something went wrong. Please try again.";
+      return "Algo salió mal. Inténtalo de nuevo.";
   }
 }
 

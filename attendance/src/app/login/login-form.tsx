@@ -17,20 +17,20 @@ export function LoginForm() {
       }}
     >
       <label>
-        Email
-        <input name="email" type="email" autoComplete="email" required />
+        Correo electrónico
+        <input name="email" type="email" autoComplete="email" required placeholder="nombre@colegio.edu.co" />
       </label>
       <label>
-        Password
+        Contraseña
         <input name="password" type="password" autoComplete="current-password" required />
       </label>
       {state?.error && (
-        <p className="error" role="alert" style={{ margin: 0 }}>
-          {state.error}
-        </p>
+        <div className="callout danger" role="alert">
+          <p>{state.error}</p>
+        </div>
       )}
-      <button type="submit" disabled={pending}>
-        {pending ? "Signing in…" : "Sign in"}
+      <button type="submit" className="lg" disabled={pending}>
+        {pending ? "Ingresando…" : "Iniciar sesión"}
       </button>
     </form>
   );

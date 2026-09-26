@@ -1,9 +1,14 @@
+import { ChevronDown, Cpu, Plus, RadioTower } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
 import { SchoolSlugInput } from "@/components/school-slug-input";
-import { formatLocalDate, formatLocalTime } from "@/lib/time";
+import { fmtShortDate, fmtTime } from "@/lib/ui/format";
 import { requireRole } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { createReader, rotateReaderToken, setDeviceStatus } from "@/server/admin/devices";
+import { SettingsTabs } from "@/components/shell/section-tabs";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/status-badge";
 
 type Device = {
   id: string;
@@ -15,6 +20,8 @@ type Device = {
   last_seen_at: string | null;
   class: { name: string } | null;
 };
+
+export const metadata = { title: "Lectores NFC" };
 
 export default async function DevicesPage({ params }: PageProps<"/s/[schoolSlug]/admin/devices">) {
   const { schoolSlug } = await params;
@@ -33,105 +40,125 @@ export default async function DevicesPage({ params }: PageProps<"/s/[schoolSlug]
     supabase.from("class_sections").select("id, name").eq("school_id", access.school.id).eq("status", "active").order("name"),
   ]);
   if (error) throw new Error(error.message);
+  const now = new Date().getTime();
 
   return (
-    <div className="stack">
-      <h1>Devices</h1>
-      <p className="muted" style={{ margin: 0 }}>
-        NFC readers send card taps to the attendance API with their own token. A reader can be tied to one classroom, or
-        left general (e.g. at the school gate).
-      </p>
+    <div className="stack-lg">
+      <PageHeader title="Configuración" subtitle="Los lectores NFC envían cada toque al API de asistencia con su propio token." />
+      <SettingsTabs slug={schoolSlug} active="devices" />
 
-      <section className="card stack">
-        <h2>Add a reader</h2>
-        <ActionForm action={createReader} submitLabel="Create reader" resetOnSuccess>
-          <SchoolSlugInput slug={schoolSlug} />
-          <div className="form-grid">
-            <label>
-              Name
-              <input name="name" required maxLength={100} placeholder="Room 101 reader" />
-            </label>
-            <label>
-              Location (optional)
-              <input name="location" maxLength={100} placeholder="Door, 1st floor" />
-            </label>
-            <label>
-              Classroom (optional)
-              <select name="class_section_id" defaultValue="">
-                <option value="">Any class (general reader)</option>
-                {(classes ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </ActionForm>
-      </section>
+      <details className="disclosure card" style={{ padding: 0 }}>
+        <summary>
+          <span className="kpi-icon tone-blue" style={{ width: 32, height: 32, borderRadius: 9 }}>
+            <Plus size={16} />
+          </span>
+          Agregar lector
+          <ChevronDown size={18} className="chev" />
+        </summary>
+        <div className="disclosure-body stack">
+          <p className="hint">Un lector puede quedar asignado a un salón o ser general (p. ej. en la entrada del colegio).</p>
+          <ActionForm action={createReader} submitLabel="Crear lector" resetOnSuccess>
+            <SchoolSlugInput slug={schoolSlug} />
+            <div className="form-grid">
+              <label>
+                Nombre
+                <input name="name" required maxLength={100} placeholder="Lector salón 201" />
+              </label>
+              <label>
+                Ubicación (opcional)
+                <input name="location" maxLength={100} placeholder="Puerta, piso 2" />
+              </label>
+              <label>
+                Clase (opcional)
+                <select name="class_section_id" defaultValue="">
+                  <option value="">Cualquier clase (lector general)</option>
+                  {(classes ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </ActionForm>
+        </div>
+      </details>
 
-      <section className="card stack">
-        <h2>All devices</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Classroom</th>
-                <th>Last seen</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(devices ?? []).map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    {d.name}
-                    {d.location && <div className="muted">{d.location}</div>}
-                  </td>
-                  <td>
-                    {d.kind === "simulator" ? "Simulator" : "Reader"}
-                    {d.token_last4 && <div className="muted">token …{d.token_last4}</div>}
-                  </td>
-                  <td>{d.class?.name ?? <span className="muted">any</span>}</td>
-                  <td>
-                    {d.last_seen_at ? `${formatLocalDate(d.last_seen_at, tz)} ${formatLocalTime(d.last_seen_at, tz)}` : "—"}
-                  </td>
-                  <td>
-                    <span className="badge">{d.status}</span>
-                  </td>
-                  <td className="stack" style={{ gap: "0.4rem" }}>
-                    {d.kind === "reader" && (
-                      <ActionForm
-                        action={rotateReaderToken}
-                        submitLabel="New token"
-                        variant="secondary"
-                        className="stack small"
-                        confirmText="Create a new token? The reader's current token stops working immediately."
-                      >
-                        <SchoolSlugInput slug={schoolSlug} />
-                        <input type="hidden" name="deviceId" value={d.id} />
-                      </ActionForm>
-                    )}
+      {(devices ?? []).length === 0 ? (
+        <div className="card">
+          <EmptyState icon={RadioTower} title="Aún no hay dispositivos" />
+        </div>
+      ) : (
+        <section className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
+          {(devices ?? []).map((d) => {
+            const online = d.status === "active" && d.last_seen_at && now - new Date(d.last_seen_at).getTime() < 24 * 3600_000;
+            return (
+              <div key={d.id} className="card stack">
+                <div className="row-between">
+                  <span className={`kpi-icon ${d.kind === "simulator" ? "tone-violet" : "tone-blue"}`}>
+                    {d.kind === "simulator" ? <Cpu size={19} /> : <RadioTower size={19} />}
+                  </span>
+                  {d.status === "disabled" ? (
+                    <Badge tone="danger" dot>
+                      Desactivado
+                    </Badge>
+                  ) : online ? (
+                    <Badge tone="success" dot>
+                      En línea
+                    </Badge>
+                  ) : (
+                    <Badge tone="warning" dot>
+                      Sin conexión reciente
+                    </Badge>
+                  )}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0 }}>{d.name}</h3>
+                  <div className="cell-sub">{d.kind === "simulator" ? "Simulador web" : "Lector NFC"}{d.location ? ` · ${d.location}` : ""}</div>
+                </div>
+                <dl className="kv">
+                  <dt>Clase</dt>
+                  <dd>{d.class?.name ?? "Cualquiera"}</dd>
+                  <dt>Última conexión</dt>
+                  <dd>{d.last_seen_at ? `${fmtShortDate(d.last_seen_at, tz)} ${fmtTime(d.last_seen_at, tz)}` : "Nunca"}</dd>
+                  {d.token_last4 && (
+                    <>
+                      <dt>Token</dt>
+                      <dd className="mono">…{d.token_last4}</dd>
+                    </>
+                  )}
+                </dl>
+                <div className="inline" style={{ borderTop: "1px solid var(--border)", paddingTop: "0.8rem" }}>
+                  {d.kind === "reader" && (
                     <ActionForm
-                      action={setDeviceStatus}
-                      submitLabel={d.status === "active" ? "Disable" : "Enable"}
+                      action={rotateReaderToken}
+                      submitLabel="Nuevo token"
                       variant="secondary"
-                      className="inline small"
+                      className="stack small"
+                      confirmText="¿Crear un token nuevo? El token actual del lector deja de funcionar de inmediato."
+                      confirmLabel="Crear token"
                     >
                       <SchoolSlugInput slug={schoolSlug} />
                       <input type="hidden" name="deviceId" value={d.id} />
-                      <input type="hidden" name="status" value={d.status === "active" ? "disabled" : "active"} />
                     </ActionForm>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                  )}
+                  <ActionForm
+                    action={setDeviceStatus}
+                    submitLabel={d.status === "active" ? "Desactivar" : "Activar"}
+                    variant="secondary"
+                    className="inline small"
+                    quiet
+                  >
+                    <SchoolSlugInput slug={schoolSlug} />
+                    <input type="hidden" name="deviceId" value={d.id} />
+                    <input type="hidden" name="status" value={d.status === "active" ? "disabled" : "active"} />
+                  </ActionForm>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      )}
     </div>
   );
 }

@@ -49,15 +49,15 @@ export function parseReportFilters(params: Params, today: string): { filters: Re
   let from = one(params, "from") ?? addDays(to, -(DEFAULT_RANGE_DAYS - 1));
 
   if (!isRealDate(to) || !isRealDate(from)) {
-    error = "Dates must look like 2026-09-28.";
+    error = "Las fechas deben tener el formato 2026-09-28.";
     to = today;
     from = addDays(today, -(DEFAULT_RANGE_DAYS - 1));
   } else if (from > to) {
-    error = "The start date is after the end date.";
+    error = "La fecha inicial es posterior a la final.";
     [from, to] = [to, from];
   }
   if (daysBetween(from, to) >= MAX_RANGE_DAYS) {
-    error = `Reports cover at most ${MAX_RANGE_DAYS} days.`;
+    error = `Los reportes cubren como máximo ${MAX_RANGE_DAYS} días.`;
     from = addDays(to, -(MAX_RANGE_DAYS - 1));
   }
 

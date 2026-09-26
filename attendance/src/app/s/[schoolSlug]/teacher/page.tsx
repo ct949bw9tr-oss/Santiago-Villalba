@@ -1,8 +1,16 @@
 import Link from "next/link";
-import { formatLocalDate, formatLocalTime, localDateKey, utcWindowAroundLocalDay } from "@/lib/time";
-import { requireRole } from "@/server/auth/session";
+import { BookOpen, CheckCircle2, ChevronRight, Clock, UserX } from "lucide-react";
+import { localDateKey, utcWindowAroundLocalDay } from "@/lib/time";
+import { attendanceRate, firstName, fmtLongDate, fmtRate, fmtTime, greeting, hourInZone } from "@/lib/ui/format";
+import { getMyProfile, requireRole } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { KpiCard } from "@/components/ui/kpi-card";
+import { StatusBar } from "@/components/ui/rate";
+import { Badge } from "@/components/ui/status-badge";
 
+type Status = "present" | "late" | "absent" | "excused";
 type SessionRow = {
   id: string;
   starts_at: string;
@@ -10,8 +18,10 @@ type SessionRow = {
   status: "scheduled" | "cancelled" | "completed";
   room: string | null;
   class: { name: string; room: string | null } | null;
-  records: { status: string }[];
+  records: { status: Status }[];
 };
+
+export const metadata = { title: "Mis clases" };
 
 export default async function TeacherToday({ params }: PageProps<"/s/[schoolSlug]/teacher">) {
   const { schoolSlug } = await params;
@@ -21,11 +31,14 @@ export default async function TeacherToday({ params }: PageProps<"/s/[schoolSlug
 
   // Only classes this teacher is assigned to. RLS would also return every
   // class if the same person is an admin here, so filter explicitly.
-  const { data: assignments, error: assignmentError } = await supabase
-    .from("class_teachers")
-    .select("class_section_id, teacher:teachers!inner(user_id)")
-    .eq("school_id", access.school.id)
-    .eq("teacher.user_id", access.user.id);
+  const [{ data: assignments, error: assignmentError }, profile] = await Promise.all([
+    supabase
+      .from("class_teachers")
+      .select("class_section_id, teacher:teachers!inner(user_id)")
+      .eq("school_id", access.school.id)
+      .eq("teacher.user_id", access.user.id),
+    getMyProfile(),
+  ]);
   if (assignmentError) throw new Error(assignmentError.message);
   const classIds = (assignments ?? []).map((a) => a.class_section_id as string);
 
@@ -48,56 +61,103 @@ export default async function TeacherToday({ params }: PageProps<"/s/[schoolSlug
     sessions = (data ?? []).filter((s) => localDateKey(new Date(s.starts_at), tz) === today);
   }
 
-  return (
-    <div className="stack">
-      <div>
-        <h1>Today&apos;s classes</h1>
-        <p className="muted">{formatLocalDate(now, tz)}</p>
-      </div>
+  const totals = { present: 0, late: 0, absent: 0, excused: 0 };
+  for (const s of sessions) for (const r of s.records) totals[r.status]++;
+  const isLive = (s: SessionRow) => s.status !== "cancelled" && new Date(s.starts_at) <= now && now < new Date(s.ends_at);
+  const live = sessions.find(isLive);
+  const name = firstName(profile?.full_name, access.user.email);
 
-      {sessions.length === 0 ? (
-        <div className="card muted">
-          {classIds.length === 0 ? "You are not assigned to any classes yet." : "No classes scheduled today."}
+  return (
+    <div className="stack-lg">
+      <header className="page-header">
+        <div>
+          <h1>Hola{name ? `, ${name}` : ""} 👋</h1>
+          <p>
+            {greeting(hourInZone(now, tz))} · {fmtLongDate(now, tz)}
+          </p>
         </div>
-      ) : (
-        <div className="card">
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Class</th>
-                <th>Room</th>
-                <th>Present</th>
-                <th>Late</th>
-                <th>Absent</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    {formatLocalTime(s.starts_at, tz)}–{formatLocalTime(s.ends_at, tz)}
-                  </td>
-                  <td>
-                    <Link href={`/s/${schoolSlug}/sessions/${s.id}`}>{s.class?.name}</Link>
-                  </td>
-                  <td>{s.room ?? s.class?.room ?? "—"}</td>
-                  <td>{s.records.filter((r) => r.status === "present").length}</td>
-                  <td>{s.records.filter((r) => r.status === "late").length}</td>
-                  <td>{s.records.filter((r) => r.status === "absent").length}</td>
-                  <td>
-                    <span className="badge">{s.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      </header>
+
+      {live && (
+        <Link href={`/s/${schoolSlug}/sessions/${live.id}`} className="card card-hover row" style={{ background: "linear-gradient(135deg, #2f5bea, #1d3aa6)", color: "#fff", border: 0 }}>
+          <span className="kpi-icon" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
+            <BookOpen size={20} />
+          </span>
+          <div className="grow">
+            <div style={{ fontSize: "0.8rem", opacity: 0.85 }} className="inline">
+              <span className="live-dot" /> Clase en curso
+            </div>
+            <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{live.class?.name}</div>
+            <div style={{ fontSize: "0.82rem", opacity: 0.85 }}>
+              {live.records.filter((r) => r.status === "present" || r.status === "late").length} registrados · hasta {fmtTime(live.ends_at, tz)}
+            </div>
+          </div>
+          <span className="button secondary small" style={{ color: "var(--primary)" }}>
+            Ver asistencia <ChevronRight size={15} />
+          </span>
+        </Link>
       )}
-      <p className="muted" style={{ fontSize: "0.85rem" }}>
-        Open a class to see who has arrived and to correct attendance.
-      </p>
+
+      <section className="grid-kpi">
+        <KpiCard icon={CheckCircle2} tone="green" value={fmtRate(attendanceRate(totals))} label="Asistencia hoy" />
+        <KpiCard icon={Clock} tone="orange" value={totals.late} label="Llegadas tarde" />
+        <KpiCard icon={UserX} tone="red" value={totals.absent} label="Ausencias" />
+        <KpiCard icon={BookOpen} tone="blue" value={sessions.filter((s) => s.status !== "cancelled").length} label="Clases hoy" />
+      </section>
+
+      <Card title="Mis clases de hoy" subtitle="Abre una clase para ver quién llegó y corregir la asistencia.">
+        {sessions.length === 0 ? (
+          <EmptyState icon={BookOpen} title={classIds.length === 0 ? "Aún no tienes clases asignadas" : "No tienes clases hoy"} compact />
+        ) : (
+          <div className="stack-sm">
+            {sessions.map((s) => {
+              const c = { present: 0, late: 0, absent: 0, excused: 0 };
+              for (const r of s.records) c[r.status]++;
+              const on = isLive(s);
+              const done = new Date(s.ends_at) <= now;
+              const room = s.room ?? s.class?.room;
+              return (
+                <Link key={s.id} href={`/s/${schoolSlug}/sessions/${s.id}`} className={`session-card${on ? " live" : ""}`}>
+                  <div className="row-between">
+                    <div className="row" style={{ minWidth: 0 }}>
+                      <span className="time-pill">{fmtTime(s.starts_at, tz)}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="cell-title truncate">{s.class?.name}</div>
+                        <div className="cell-sub truncate">
+                          {room ? `Salón ${room} · ` : ""}hasta {fmtTime(s.ends_at, tz)}
+                        </div>
+                      </div>
+                    </div>
+                    {s.status === "cancelled" ? (
+                      <Badge tone="danger">Cancelada</Badge>
+                    ) : on ? (
+                      <Badge tone="success">
+                        <span className="live-dot" /> En vivo
+                      </Badge>
+                    ) : done ? (
+                      <Badge tone="neutral">Finalizada</Badge>
+                    ) : (
+                      <Badge tone="info">Próxima</Badge>
+                    )}
+                  </div>
+                  <StatusBar {...c} />
+                  <div className="stat-row">
+                    <span>
+                      <b>{c.present}</b> presentes
+                    </span>
+                    <span>
+                      <b>{c.late}</b> tarde
+                    </span>
+                    <span>
+                      <b>{c.absent}</b> ausentes
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

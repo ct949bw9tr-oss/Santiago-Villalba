@@ -34,8 +34,8 @@ export function LiveRefresh({ sessionId }: { sessionId: string }) {
   }, [sessionId, router]);
 
   return (
-    <span className="badge" title={realtime ? "Updates instantly" : "Refreshes every 10 seconds"}>
-      <span style={{ color: "#2e7d32" }}>●</span> Live{realtime ? "" : " (auto-refresh)"}
+    <span className="badge success" title={realtime ? "Se actualiza al instante" : "Se actualiza cada 10 segundos"}>
+      <span className="live-dot" /> En vivo{realtime ? "" : " · auto"}
     </span>
   );
 }

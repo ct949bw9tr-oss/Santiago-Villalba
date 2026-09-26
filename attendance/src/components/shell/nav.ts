@@ -63,7 +63,7 @@ export function buildNavigation(access: SchoolAccess): Navigation {
       soon("reports", "Reportes", "reports", "reports"),
       soon("discipline", "Disciplina", "discipline", "discipline"),
       soon("messages", "Comunicación", "messages", "messages"),
-      soon("calendar", "Calendario", "calendar", "calendar"),
+      { key: "calendar", label: "Calendario", href: `${base}/calendar`, icon: "calendar", match: [`${base}/calendar`] },
       { key: "analytics", label: "Analytics", href: `${base}/admin/attendance`, icon: "analytics", match: [`${base}/admin/attendance`] },
       soon("ai", "EduTrack AI", "ai", "ai"),
       {
@@ -83,7 +83,7 @@ export function buildNavigation(access: SchoolAccess): Navigation {
       soon("reports", "Reportes", "reports", "reports"),
       soon("discipline", "Disciplina", "discipline", "discipline"),
       soon("messages", "Comunicación", "messages", "messages"),
-      soon("calendar", "Calendario", "calendar", "calendar"),
+      { key: "calendar", label: "Calendario", href: `${base}/calendar`, icon: "calendar", match: [`${base}/calendar`] },
       soon("ai", "EduTrack AI", "ai", "ai"),
     );
     return { items, mobile: ["home", "reports", "calendar"], fab: null };
@@ -92,7 +92,7 @@ export function buildNavigation(access: SchoolAccess): Navigation {
   items.push(
     { key: "home", label: "Inicio", href: `${base}/student`, icon: "home", match: [`${base}/student`] },
     soon("messages", "Comunicación", "messages", "messages"),
-    soon("calendar", "Calendario", "calendar", "calendar"),
+    { key: "calendar", label: "Calendario", href: `${base}/calendar`, icon: "calendar", match: [`${base}/calendar`] },
   );
   return { items, mobile: ["home", "calendar"], fab: null };
 }

@@ -239,8 +239,8 @@ export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlu
                   <th style={{ paddingLeft: "1.35rem" }}>Estudiante</th>
                   <th>Hora</th>
                   <th>Resultado</th>
-                  <th>Tarjeta</th>
-                  <th>Origen</th>
+                  <th className="hide-sm">Tarjeta</th>
+                  <th className="hide-sm">Origen</th>
                 </tr>
               </thead>
               <tbody>
@@ -266,10 +266,10 @@ export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlu
                         )}
                       </span>
                     </td>
-                    <td data-label="Tarjeta" className="mono">
+                    <td data-label="Tarjeta" className="mono hide-sm">
                       {formatUid(s.uid_normalized)}
                     </td>
-                    <td data-label="Origen">{s.device.kind === "simulator" ? "Simulador" : s.device.name}</td>
+                    <td data-label="Origen" className="hide-sm">{s.device.kind === "simulator" ? "Simulador" : s.device.name}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,6 @@
-# School Attendance
+# EduTrack
 
-Multi-school SaaS for class attendance via NFC cards. Next.js (App Router,
+Multi-school SaaS for class attendance via NFC cards (EduTrack). Next.js (App Router,
 TypeScript) + Supabase (Postgres, Auth, RLS), deployed on Vercel.
 
 Design, API contract and roadmap: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
@@ -10,6 +10,9 @@ screens, the attendance engine (one scan API for NFC readers and the web
 simulator, automatic absences), the teacher's live class view with audited
 manual corrections, and **reports** (by class / by student with attendance
 rate, filters, CSV export for Excel). API contract: [`docs/API.md`](./docs/API.md).
+
+**UI: EduTrack design system** (Spanish). See [`docs/UI.md`](./docs/UI.md) for the
+tokens, components and which modules are still "Próximamente" (no backend yet).
 
 ## What's here
 

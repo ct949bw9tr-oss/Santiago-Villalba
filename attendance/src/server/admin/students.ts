@@ -13,17 +13,17 @@ export async function createStudent(_prev: FormState, formData: FormData): Promi
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("students").insert({ ...parsed.data, school_id: access.school.id });
-  if (error) return { error: dbErrorMessage(error, { unique: "A student with that number already exists." }) };
+  if (error) return { error: dbErrorMessage(error, { unique: "Ya existe un estudiante con ese código." }) };
 
   refresh();
-  return { message: `${parsed.data.first_name} ${parsed.data.last_name} added.` };
+  return { message: `${parsed.data.first_name} ${parsed.data.last_name} fue agregado.` };
 }
 
 export async function updateStudent(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("studentId"));
   const parsed = studentSchema.safeParse(Object.fromEntries(formData));
-  if (!id.success) return { error: "Unknown student." };
+  if (!id.success) return { error: "Estudiante desconocido." };
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 
   const supabase = await createSupabaseServerClient();
@@ -33,22 +33,22 @@ export async function updateStudent(_prev: FormState, formData: FormData): Promi
     .eq("id", id.data)
     .eq("school_id", access.school.id)
     .select("id");
-  if (error) return { error: dbErrorMessage(error, { unique: "Another student already has that number." }) };
-  if (!data?.length) return { error: "Unknown student." };
+  if (error) return { error: dbErrorMessage(error, { unique: "Otro estudiante ya tiene ese código." }) };
+  if (!data?.length) return { error: "Estudiante desconocido." };
 
   refresh();
-  return { message: "Saved." };
+  return { message: "Cambios guardados." };
 }
 
 export async function assignCard(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const studentId = uuid.safeParse(formData.get("studentId"));
   const parsed = cardSchema.safeParse(Object.fromEntries(formData));
-  if (!studentId.success) return { error: "Unknown student." };
+  if (!studentId.success) return { error: "Estudiante desconocido." };
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 
   const uid = normalizeUid(parsed.data.uid);
-  if (!uid) return { error: "That isn't a valid card UID (expected 4, 7 or 10 bytes in hex, e.g. 04:A2:2B:1C:9F:5E:80)." };
+  if (!uid) return { error: "Ese no es un UID de tarjeta válido (4, 7 o 10 bytes en hexadecimal, p. ej. 04:A2:2B:1C:9F:5E:80)." };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("nfc_credentials").insert({
@@ -68,19 +68,19 @@ export async function assignCard(_prev: FormState, formData: FormData): Promise<
       .returns<{ student: { first_name: string; last_name: string } }[]>()
       .maybeSingle();
     const who = owner ? `${owner.student.first_name} ${owner.student.last_name}` : "another student";
-    return { error: `That card is already assigned to ${who}. Revoke it there first.` };
+    return { error: `Esa tarjeta ya está asignada a ${who}. Revócala allí primero.` };
   }
-  if (error) return { error: dbErrorMessage(error, { foreignKey: "Unknown student." }) };
+  if (error) return { error: dbErrorMessage(error, { foreignKey: "Estudiante desconocido." }) };
 
   refresh();
-  return { message: "Card assigned." };
+  return { message: "Tarjeta asignada." };
 }
 
 export async function revokeCard(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const cardId = uuid.safeParse(formData.get("cardId"));
   const status = formData.get("status") === "lost" ? "lost" : "revoked";
-  if (!cardId.success) return { error: "Unknown card." };
+  if (!cardId.success) return { error: "Tarjeta desconocida." };
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -91,8 +91,8 @@ export async function revokeCard(_prev: FormState, formData: FormData): Promise<
     .eq("status", "active")
     .select("id");
   if (error) return { error: dbErrorMessage(error) };
-  if (!data?.length) return { error: "Card not found or already inactive." };
+  if (!data?.length) return { error: "La tarjeta no existe o ya estaba inactiva." };
 
   refresh();
-  return { message: status === "lost" ? "Card marked as lost." : "Card revoked." };
+  return { message: status === "lost" ? "Tarjeta marcada como perdida." : "Tarjeta revocada." };
 }
