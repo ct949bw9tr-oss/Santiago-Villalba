@@ -1,6 +1,6 @@
 # School Attendance SaaS — Architecture (v0.2)
 
-Status: **approved; Phases 1–2 implemented** (see §7 and §8 for what was built
+Status: **approved; Phases 1–3 implemented** (see §7 and §8 for what was built
 and the decisions taken).
 
 Scope: a multi-school (multi-tenant) SaaS that records class attendance from
@@ -505,6 +505,17 @@ can be revisited.
   admin can never take over an account that has access elsewhere.
 * Phase 2: a daily pg_cron job (`generate_upcoming_sessions`) keeps 28 days of
   sessions materialized; adding a time slot also generates them immediately.
+* Phase 3 — **the engine lives in Postgres** (`public.process_scan`), not in
+  TypeScript as first sketched in §1.2/§4.3. Supabase's JS client has no
+  multi-statement transactions, and the tap must be all-or-nothing (log +
+  record + audit) and race-free (advisory locks per device/key and per
+  session/student). The API layer only authenticates the caller, validates
+  input and chooses the effective time; the SQL test suite covers the rules.
+  Contract and decision steps: [`API.md`](./API.md).
+* Phase 3 — the simulator is enabled per school by an admin (Admin → NFC
+  simulator) and its taps are attributed to that school's simulator device;
+  it may simulate a tap time within ±24 h (tagged "simulated time").
+  Readers' own clocks are trusted only within ±2 minutes.
 * Supabase-specific: every new table must revoke the default `anon` /
   `authenticated` grants (Supabase adds them automatically).
 * Queries must filter by the active `school_id` even though RLS already

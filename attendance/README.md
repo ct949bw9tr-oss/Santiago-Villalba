@@ -5,10 +5,11 @@ TypeScript) + Supabase (Postgres, Auth, RLS), deployed on Vercel.
 
 Design, API contract and roadmap: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
-**Status: Phase 2 complete** — schema, tenant isolation, authentication, and
-the admin screens (students, teachers with invite links, courses, classes,
-weekly schedules, enrollments, NFC cards, attendance rules). Next: the
-attendance engine, scan API and NFC simulator (Phase 3).
+**Status: Phase 3 complete** — schema, tenant isolation, authentication, admin
+screens, and the **attendance engine**: one scan API for NFC readers and the
+web simulator, present/late/duplicate rules, automatic absences, reader
+tokens. API contract: [`docs/API.md`](./docs/API.md). Next: the teacher's live
+class view with manual corrections (Phase 4).
 
 ## What's here
 

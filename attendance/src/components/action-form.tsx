@@ -61,6 +61,17 @@ export function ActionForm({
         )}
         {state?.message && !state.error && <span className="success">{state.message}</span>}
       </div>
+      {state?.secret && (
+        <label>
+          {state.secret.label}
+          <input
+            readOnly
+            value={state.secret.value}
+            onFocus={(e) => e.currentTarget.select()}
+            style={{ fontFamily: "monospace" }}
+          />
+        </label>
+      )}
       {state?.link && (
         <label>
           Share this one-time sign-in link with them (select it, then copy):

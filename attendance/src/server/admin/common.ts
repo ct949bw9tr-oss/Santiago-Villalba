@@ -8,6 +8,8 @@ export type FormState =
       message?: string;
       /** A one-time sign-in link to hand to someone (shown selectable). */
       link?: string;
+      /** A secret shown exactly once (e.g. a reader token). */
+      secret?: { label: string; value: string };
     }
   | undefined;
 
