@@ -1,13 +1,21 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { signIn } from "@/server/auth/actions";
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(signIn, undefined);
 
   return (
-    <form action={action} className="stack">
+    <form
+      className="stack"
+      onSubmit={(event) => {
+        // Submit manually so React doesn't clear the fields when sign-in fails.
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        startTransition(() => action(formData));
+      }}
+    >
       <label>
         Email
         <input name="email" type="email" autoComplete="email" required />

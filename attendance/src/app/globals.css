@@ -183,3 +183,88 @@ td {
   border-radius: 999px;
   border: 1px solid var(--border);
 }
+
+/* ---- Phase 2: admin screens ---- */
+.success {
+  color: var(--accent);
+}
+
+.form-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+select,
+textarea {
+  font: inherit;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.subnav {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.subnav a {
+  text-decoration: none;
+  color: var(--text);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.25rem 1rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.checklist label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+button.small,
+.small button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}

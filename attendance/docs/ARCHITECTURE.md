@@ -1,7 +1,7 @@
 # School Attendance SaaS — Architecture (v0.2)
 
-Status: **approved; Phase 1 implemented** (see §7 and §8 for what was built and
-the decisions taken).
+Status: **approved; Phases 1–2 implemented** (see §7 and §8 for what was built
+and the decisions taken).
 
 Scope: a multi-school (multi-tenant) SaaS that records class attendance from
 NFC card taps. Physical readers come later; for now scans are simulated, but
@@ -498,6 +498,13 @@ can be revisited.
   the matching membership in the same school (trigger-enforced).
 * Two RPCs were pulled forward from later phases because the demo seed needs
   them: `provision_school` and `generate_class_sessions` (service-role only).
+* Phase 2: teacher invitations return a one-time sign-in link (Auth admin
+  `generateLink`) for the admin to share, instead of email — Supabase's default
+  mailer only delivers to project team members. An admin can only create a new
+  link for an account whose memberships are all in their own school, so an
+  admin can never take over an account that has access elsewhere.
+* Phase 2: a daily pg_cron job (`generate_upcoming_sessions`) keeps 28 days of
+  sessions materialized; adding a time slot also generates them immediately.
 * Supabase-specific: every new table must revoke the default `anon` /
   `authenticated` grants (Supabase adds them automatically).
 * Queries must filter by the active `school_id` even though RLS already

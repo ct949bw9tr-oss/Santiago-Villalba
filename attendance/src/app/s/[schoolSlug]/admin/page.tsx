@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 
@@ -17,10 +18,9 @@ export default async function AdminDashboard({ params }: PageProps<"/s/[schoolSl
   // administers, and a person can be an admin in more than one school.
   const counts = await Promise.all(
     COUNTED_TABLES.map(async ({ table, label }) => {
-      const { count, error } = await supabase
-        .from(table)
-        .select("id", { count: "exact", head: true })
-        .eq("school_id", access.school.id);
+      let query = supabase.from(table).select("id", { count: "exact", head: true }).eq("school_id", access.school.id);
+      if (table === "nfc_credentials") query = query.eq("status", "active");
+      const { count, error } = await query;
       if (error) throw new Error(`Failed to count ${table}: ${error.message}`);
       return { label, count: count ?? 0 };
     }),
@@ -42,12 +42,23 @@ export default async function AdminDashboard({ params }: PageProps<"/s/[schoolSl
         ))}
       </section>
 
-      <section className="card">
-        <h2>Coming next (Phase 2)</h2>
-        <p className="muted">
-          Management screens for students, teachers, courses, classes, schedules, enrollments, NFC cards and
-          attendance rules.
-        </p>
+      <section className="card stack">
+        <h2>Setting up your school</h2>
+        <ol className="stack" style={{ margin: 0, paddingLeft: "1.25rem", gap: "0.4rem" }}>
+          <li>
+            Add <Link href={`/s/${schoolSlug}/admin/teachers`}>teachers</Link> and{" "}
+            <Link href={`/s/${schoolSlug}/admin/students`}>students</Link>.
+          </li>
+          <li>
+            Create <Link href={`/s/${schoolSlug}/admin/courses`}>courses</Link> (subjects), then{" "}
+            <Link href={`/s/${schoolSlug}/admin/classes`}>classes</Link> with their weekly schedule.
+          </li>
+          <li>In each class, assign its teacher and enroll its students.</li>
+          <li>Give each student an NFC card from their student page.</li>
+          <li>
+            Review the <Link href={`/s/${schoolSlug}/admin/rules`}>attendance rules</Link> (on time / late / absent).
+          </li>
+        </ol>
       </section>
     </div>
   );
