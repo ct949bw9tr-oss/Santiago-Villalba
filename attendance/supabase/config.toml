@@ -1,0 +1,35 @@
+# Local development config for the Supabase CLI (`supabase start`).
+# Hosted projects: mirror the [auth] settings in the dashboard (see README).
+project_id = "school-attendance"
+
+[api]
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+# Demo data is created with `npm run seed:demo` (uses the Auth admin API).
+enabled = false
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/confirm"]
+jwt_expiry = 3600
+# No public sign-up: accounts are created by invitation only.
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false
+
+[auth.email.template.invite]
+subject = "You're invited to School Attendance"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.recovery]
+subject = "Reset your School Attendance password"
+content_path = "./supabase/templates/recovery.html"

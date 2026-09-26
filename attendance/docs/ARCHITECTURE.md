@@ -1,7 +1,7 @@
-# School Attendance SaaS — Architecture Proposal (v0.1, for approval)
+# School Attendance SaaS — Architecture (v0.2)
 
-Status: **proposal — no application code yet.** Phase 1 starts only after this
-document is approved.
+Status: **approved; Phase 1 implemented** (see §7 and §8 for what was built and
+the decisions taken).
 
 Scope: a multi-school (multi-tenant) SaaS that records class attendance from
 NFC card taps. Physical readers come later; for now scans are simulated, but
@@ -53,13 +53,13 @@ RLS, Realtime, pg_cron) · GitHub.
 | Validation | `zod` schemas at every API/Server Action boundary | One schema per contract, shared with the simulator form. |
 | Environments | Separate Supabase projects for `dev`/`staging` and `prod`; Vercel preview deployments point at staging | Never test the simulator against production data. |
 
-### 1.3 Where should this code live?
+### 1.3 Where the code lives
 
-This repository currently contains **TaskSwift** (a different product with its
-own Supabase migrations and `users` table). Mixing the attendance product into
-it would entangle migrations, CI and deploys. **Recommendation: a new, dedicated
-GitHub repository and dedicated Supabase projects.** This document lives here
-only because this is the branch assigned to the task — see *Open questions*.
+The product lives in the `attendance/` folder of this repository, fully
+independent of TaskSwift (own `package.json`, npm lockfile, Supabase
+migrations and CI workflow). It can be moved to a dedicated repository later
+with `git subtree split --prefix=attendance` without losing history. It must
+use its **own Supabase projects**, never TaskSwift's.
 
 ---
 
@@ -376,10 +376,10 @@ the same unique key. Cancelled sessions are skipped.
 
 ---
 
-## 5. Project folder structure (new repo)
+## 5. Project folder structure
 
 ```
-school-attendance/
+attendance/
 ├─ src/
 │  ├─ app/
 │  │  ├─ (public)/login/                   # sign-in, invite acceptance
@@ -475,11 +475,30 @@ school-attendance/
 
 ---
 
-## 8. Open questions for you (answers shape Phase 1)
+## 8. Decisions taken for Phase 1
 
-1. **Repository**: create a new dedicated repo (recommended) or build inside this TaskSwift repo under a separate top-level folder?
-2. **Market & language**: UI in Spanish, English, or both? Which timezone(s) are the first schools in?
-3. **Student logins in MVP**: do students need to sign in now, or only exist as records (with login added later)?
-4. **Attendance granularity**: per class period (this design) only, or also a daily "arrived at school" gate check-in? (The schema supports adding it as a school-level session.)
-5. **Default rules**: sensible defaults are early 10 min / grace 5 min / absent after 20 min / later taps count as `late`. OK?
-6. **Onboarding**: will you (platform admin) create each school and its first admin manually for now? (Recommended; self-serve school sign-up later.)
+The open questions from the proposal were resolved with these defaults; each
+can be revisited.
+
+| Question | Decision |
+|---|---|
+| Repository | `attendance/` folder in this repo (see §1.3). |
+| Language / timezone | UI in English for now (Spanish i18n later); schools default to `America/Bogota`, `es-CO`. |
+| Student logins | Optional. Students are records; a login can be linked later via a `student` membership. |
+| Granularity | Per class session. A daily gate check-in can be added later as a school-level session. |
+| Default rules | early 10 min · grace 5 min · absent after 20 min · later taps count as `late` · 60 s debounce. |
+| Onboarding | Operator script `npm run school:create` (atomic `provision_school` RPC + admin invitation). |
+
+### Implementation notes (Phase 1)
+
+* Memberships can only be **created** by the server/operator (service role),
+  not by admins through the API — invitations go through a server flow in
+  Phase 2. Admins can disable/remove other members, never themselves.
+* `students.user_id` / `teachers.user_id` may only point at an account holding
+  the matching membership in the same school (trigger-enforced).
+* Two RPCs were pulled forward from later phases because the demo seed needs
+  them: `provision_school` and `generate_class_sessions` (service-role only).
+* Supabase-specific: every new table must revoke the default `anon` /
+  `authenticated` grants (Supabase adds them automatically).
+* Queries must filter by the active `school_id` even though RLS already
+  restricts rows: RLS allows *all* schools a user belongs to.
