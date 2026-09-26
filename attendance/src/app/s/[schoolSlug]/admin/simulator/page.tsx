@@ -103,7 +103,12 @@ export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlu
 
   return (
     <div className="stack">
-      <h1>NFC simulator</h1>
+      <div>
+        <h1>NFC simulator</h1>
+        <p className="muted" style={{ margin: 0 }}>
+          School time now: <strong>{formatLocalTime(now, tz)}</strong> ({tz})
+        </p>
+      </div>
 
       <section className="card stack">
         {students.length === 0 && (
@@ -111,7 +116,7 @@ export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlu
             No student has an NFC card yet — assign one from a student&apos;s page, or type any UID below.
           </p>
         )}
-        <Simulator schoolSlug={schoolSlug} students={students} />
+        <Simulator schoolSlug={schoolSlug} timeZone={tz} students={students} />
       </section>
 
       <section className="card stack">

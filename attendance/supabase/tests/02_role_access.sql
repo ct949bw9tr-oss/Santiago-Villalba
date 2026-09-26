@@ -120,7 +120,11 @@ select tests.assert_eq((select count(*) from public.attendance_records), 1::bigi
 select tests.assert_eq((select count(*) from public.scan_events), 1::bigint, 'teacher sees scans for own sessions');
 select tests.assert_eq((select count(*) from public.nfc_credentials), 0::bigint, 'teacher cannot see credentials');
 select tests.assert_eq((select count(id) from public.devices), 0::bigint, 'teacher cannot see devices');
-select tests.assert_eq((select count(*) from public.audit_logs), 0::bigint, 'teacher cannot see audit log');
+select tests.assert_eq(
+  (select count(*) from public.audit_logs where entity_type = 'attendance_records'
+     and entity_id = '0000000a-0000-0000-0009-000000000001'), 1::bigint,
+  'teacher sees the attendance history of their own class');
+select tests.assert_eq((select count(*) from public.audit_logs), 1::bigint, 'teacher sees no other audit entries');
 select tests.assert_eq((select count(*) from public.school_memberships), 1::bigint, 'teacher sees only own membership');
 select tests.assert_eq((select count(*) from public.profiles), 1::bigint, 'teacher sees only own profile');
 

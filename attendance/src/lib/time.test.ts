@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { localDateKey, utcWindowAroundLocalDay } from "./time";
+import { localDateKey, utcWindowAroundLocalDay, wallTimeInZone, zonedWallTimeToUtc } from "./time";
 
 describe("localDateKey", () => {
   it("uses the school's timezone, not UTC", () => {
@@ -22,5 +22,25 @@ describe("utcWindowAroundLocalDay", () => {
     // Local midnight at UTC+14 and end of day at UTC-12 must both fall inside.
     expect(from.getTime()).toBeLessThanOrEqual(new Date("2026-09-25T10:00:00Z").getTime());
     expect(to.getTime()).toBeGreaterThanOrEqual(new Date("2026-09-27T12:00:00Z").getTime());
+  });
+});
+
+describe("zonedWallTimeToUtc / wallTimeInZone", () => {
+  it("interprets the wall time in the school's zone, not the viewer's", () => {
+    expect(zonedWallTimeToUtc("2026-09-26T03:42", "America/Bogota").toISOString()).toBe("2026-09-26T08:42:00.000Z");
+    expect(zonedWallTimeToUtc("2026-09-26T03:42", "America/New_York").toISOString()).toBe("2026-09-26T07:42:00.000Z");
+  });
+
+  it("handles DST in the school's zone", () => {
+    expect(zonedWallTimeToUtc("2026-03-09T08:00", "America/New_York").toISOString()).toBe("2026-03-09T12:00:00.000Z");
+    expect(zonedWallTimeToUtc("2026-03-07T08:00", "America/New_York").toISOString()).toBe("2026-03-07T13:00:00.000Z");
+  });
+
+  it("round-trips", () => {
+    const instant = new Date("2026-09-26T07:39:00Z");
+    expect(wallTimeInZone(instant, "America/Bogota")).toBe("2026-09-26T02:39");
+    expect(zonedWallTimeToUtc(wallTimeInZone(instant, "America/Bogota"), "America/Bogota").toISOString()).toBe(
+      instant.toISOString(),
+    );
   });
 });

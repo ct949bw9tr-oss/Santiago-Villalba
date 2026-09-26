@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { wallTimeInZone, zonedWallTimeToUtc } from "@/lib/time";
 
 type Student = { id: string; name: string; uid: string };
 
@@ -28,7 +29,15 @@ const FEEDBACK_STYLE: Record<string, { bg: string; label: string }> = {
  * Sends taps to the SAME endpoint real readers use
  * (POST /api/v1/attendance/scans); only the authentication differs.
  */
-export function Simulator({ schoolSlug, students }: { schoolSlug: string; students: Student[] }) {
+export function Simulator({
+  schoolSlug,
+  timeZone,
+  students,
+}: {
+  schoolSlug: string;
+  timeZone: string;
+  students: Student[];
+}) {
   const router = useRouter();
   const [uid, setUid] = useState(students[0]?.uid ?? "");
   const [useCustomTime, setUseCustomTime] = useState(false);
@@ -40,7 +49,8 @@ export function Simulator({ schoolSlug, students }: { schoolSlug: string; studen
     setPending(true);
     try {
       const body: Record<string, string> = { uid };
-      if (useCustomTime && customTime) body.scanned_at = new Date(customTime).toISOString();
+      // The typed time is the SCHOOL's wall-clock time, whatever the viewer's timezone.
+      if (useCustomTime && customTime) body.scanned_at = zonedWallTimeToUtc(customTime, timeZone).toISOString();
       const res = await fetch("/api/v1/attendance/scans", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": key, "X-School-Slug": schoolSlug },
@@ -89,12 +99,19 @@ export function Simulator({ schoolSlug, students }: { schoolSlug: string; studen
       </div>
 
       <label style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
-        <input type="checkbox" checked={useCustomTime} onChange={(e) => setUseCustomTime(e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={useCustomTime}
+          onChange={(e) => {
+            setUseCustomTime(e.target.checked);
+            if (e.target.checked && !customTime) setCustomTime(wallTimeInZone(new Date(), timeZone));
+          }}
+        />
         Pretend the tap happens at another time (to test late / absent)
       </label>
       {useCustomTime && (
         <label>
-          Tap time (your device&apos;s time zone)
+          Tap time (school time, {timeZone})
           <input type="datetime-local" value={customTime} onChange={(e) => setCustomTime(e.target.value)} />
         </label>
       )}

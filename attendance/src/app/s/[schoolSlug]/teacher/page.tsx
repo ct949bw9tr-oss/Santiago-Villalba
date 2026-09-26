@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatLocalDate, formatLocalTime, localDateKey, utcWindowAroundLocalDay } from "@/lib/time";
 import { requireRole } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
@@ -9,6 +10,7 @@ type SessionRow = {
   status: "scheduled" | "cancelled" | "completed";
   room: string | null;
   class: { name: string; room: string | null } | null;
+  records: { status: string }[];
 };
 
 export default async function TeacherToday({ params }: PageProps<"/s/[schoolSlug]/teacher">) {
@@ -35,7 +37,7 @@ export default async function TeacherToday({ params }: PageProps<"/s/[schoolSlug
     const { from, to } = utcWindowAroundLocalDay(now);
     const { data, error } = await supabase
       .from("class_sessions")
-      .select("id, starts_at, ends_at, status, room, class:class_sections!inner(name, room)")
+      .select("id, starts_at, ends_at, status, room, class:class_sections!inner(name, room), records:attendance_records(status)")
       .eq("school_id", access.school.id)
       .in("class_section_id", classIds)
       .gte("starts_at", from.toISOString())
@@ -65,6 +67,9 @@ export default async function TeacherToday({ params }: PageProps<"/s/[schoolSlug
                 <th>Time</th>
                 <th>Class</th>
                 <th>Room</th>
+                <th>Present</th>
+                <th>Late</th>
+                <th>Absent</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -74,8 +79,13 @@ export default async function TeacherToday({ params }: PageProps<"/s/[schoolSlug
                   <td>
                     {formatLocalTime(s.starts_at, tz)}–{formatLocalTime(s.ends_at, tz)}
                   </td>
-                  <td>{s.class?.name}</td>
+                  <td>
+                    <Link href={`/s/${schoolSlug}/sessions/${s.id}`}>{s.class?.name}</Link>
+                  </td>
                   <td>{s.room ?? s.class?.room ?? "—"}</td>
+                  <td>{s.records.filter((r) => r.status === "present").length}</td>
+                  <td>{s.records.filter((r) => r.status === "late").length}</td>
+                  <td>{s.records.filter((r) => r.status === "absent").length}</td>
                   <td>
                     <span className="badge">{s.status}</span>
                   </td>
@@ -86,7 +96,7 @@ export default async function TeacherToday({ params }: PageProps<"/s/[schoolSlug
         </div>
       )}
       <p className="muted" style={{ fontSize: "0.85rem" }}>
-        Live attendance for each class arrives in Phase 4.
+        Open a class to see who has arrived and to correct attendance.
       </p>
     </div>
   );
