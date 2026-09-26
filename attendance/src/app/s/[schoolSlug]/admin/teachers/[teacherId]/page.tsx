@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BookOpen, Mail } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
 import { SchoolSlugInput } from "@/components/school-slug-input";
 import { requireRole } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { teacherSignInLink, updateTeacher } from "@/server/admin/teachers";
+import { Avatar } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/status-badge";
 
 type Teacher = {
   id: string;
@@ -34,70 +40,90 @@ export default async function TeacherPage({ params }: PageProps<"/s/[schoolSlug]
   const base = `/s/${schoolSlug}/admin`;
 
   return (
-    <div className="stack">
-      <p>
-        <Link href={`${base}/teachers`}>← Teachers</Link>
-      </p>
-      <h1>
-        {teacher.first_name} {teacher.last_name}
-      </h1>
-      {teacher.profile?.email && <p className="muted">{teacher.profile.email}</p>}
+    <div className="stack-lg">
+      <PageHeader back={{ href: `${base}/teachers`, label: "Docentes" }} title="Perfil del docente" />
 
-      <section className="card stack">
-        <h2>Details</h2>
-        <ActionForm action={updateTeacher} submitLabel="Save">
-          <SchoolSlugInput slug={schoolSlug} />
-          <input type="hidden" name="teacherId" value={teacher.id} />
-          <div className="form-grid">
-            <label>
-              First name
-              <input name="first_name" defaultValue={teacher.first_name} required maxLength={100} />
-            </label>
-            <label>
-              Last name
-              <input name="last_name" defaultValue={teacher.last_name} required maxLength={100} />
-            </label>
-            <label>
-              Employee number
-              <input name="employee_number" defaultValue={teacher.employee_number ?? ""} maxLength={64} />
-            </label>
-            <label>
-              Status
-              <select name="status" defaultValue={teacher.status}>
-                <option value="active">Active (can sign in)</option>
-                <option value="inactive">Inactive (access blocked)</option>
-              </select>
-            </label>
+      <section className="card profile-hero">
+        <Avatar first={teacher.first_name} last={teacher.last_name} id={teacher.id} size="xl" />
+        <div className="grow">
+          <div className="inline">
+            <h1>
+              {teacher.first_name} {teacher.last_name}
+            </h1>
+            <Badge tone={teacher.status === "active" ? "success" : "neutral"}>{teacher.status === "active" ? "Activo" : "Inactivo"}</Badge>
           </div>
-        </ActionForm>
+          <div className="meta-row">
+            {teacher.profile?.email && (
+              <span>
+                <Mail size={14} /> {teacher.profile.email}
+              </span>
+            )}
+            <span>
+              <BookOpen size={14} /> {teacher.classes.length} {teacher.classes.length === 1 ? "clase" : "clases"}
+            </span>
+            {teacher.employee_number && <span>Empleado {teacher.employee_number}</span>}
+          </div>
+        </div>
       </section>
 
-      <section className="card stack">
-        <h2>Sign-in link</h2>
-        <p className="muted" style={{ margin: 0 }}>
-          If they lost their invitation or forgot their password, create a new one-time link and send it to them.
-        </p>
-        <ActionForm action={teacherSignInLink} submitLabel="Create sign-in link" variant="secondary">
-          <SchoolSlugInput slug={schoolSlug} />
-          <input type="hidden" name="teacherId" value={teacher.id} />
-        </ActionForm>
-      </section>
-
-      <section className="card stack">
-        <h2>Classes</h2>
-        {teacher.classes.length === 0 ? (
-          <p className="muted">Not assigned to any class yet. Assign teachers from a class page.</p>
-        ) : (
-          <ul>
-            {teacher.classes.map((c) => (
-              <li key={c.id}>
-                <Link href={`${base}/classes/${c.class.id}`}>{c.class.name}</Link>{" "}
-                <span className="muted">({c.role})</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <div className="grid-main">
+        <div className="stack">
+          <Card title="Datos">
+            <ActionForm action={updateTeacher} submitLabel="Guardar">
+              <SchoolSlugInput slug={schoolSlug} />
+              <input type="hidden" name="teacherId" value={teacher.id} />
+              <div className="form-grid">
+                <label>
+                  Nombres
+                  <input name="first_name" defaultValue={teacher.first_name} required maxLength={100} />
+                </label>
+                <label>
+                  Apellidos
+                  <input name="last_name" defaultValue={teacher.last_name} required maxLength={100} />
+                </label>
+                <label>
+                  N.º de empleado
+                  <input name="employee_number" defaultValue={teacher.employee_number ?? ""} maxLength={64} />
+                </label>
+                <label>
+                  Estado
+                  <select name="status" defaultValue={teacher.status}>
+                    <option value="active">Activo (puede ingresar)</option>
+                    <option value="inactive">Inactivo (acceso bloqueado)</option>
+                  </select>
+                </label>
+              </div>
+            </ActionForm>
+          </Card>
+          <Card title="Enlace de acceso" subtitle="Si perdió la invitación u olvidó su contraseña, crea un nuevo enlace de un solo uso y envíaselo.">
+            <ActionForm action={teacherSignInLink} submitLabel="Crear enlace de acceso" variant="secondary">
+              <SchoolSlugInput slug={schoolSlug} />
+              <input type="hidden" name="teacherId" value={teacher.id} />
+            </ActionForm>
+          </Card>
+        </div>
+        <Card title="Clases">
+          {teacher.classes.length === 0 ? (
+            <EmptyState icon={BookOpen} title="Sin clases asignadas" compact>
+              Asigna docentes desde la página de cada clase.
+            </EmptyState>
+          ) : (
+            <ul className="list">
+              {teacher.classes.map((c) => (
+                <li key={c.id} className="list-item">
+                  <span className="feed-icon tone-blue">
+                    <BookOpen size={15} />
+                  </span>
+                  <Link className="cell-title grow" href={`${base}/classes/${c.class.id}`}>
+                    {c.class.name}
+                  </Link>
+                  <Badge tone="neutral">{c.role === "primary" ? "Principal" : "Asistente"}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

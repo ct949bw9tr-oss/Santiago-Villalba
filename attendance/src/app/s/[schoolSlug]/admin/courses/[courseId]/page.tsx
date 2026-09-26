@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BookOpen } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
 import { SchoolSlugInput } from "@/components/school-slug-input";
 import { requireRole } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { updateCourse } from "@/server/admin/courses";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 
 type Course = {
   id: string;
@@ -30,50 +34,48 @@ export default async function CoursePage({ params }: PageProps<"/s/[schoolSlug]/
   const base = `/s/${schoolSlug}/admin`;
 
   return (
-    <div className="stack">
-      <p>
-        <Link href={`${base}/courses`}>← Courses</Link>
-      </p>
-      <h1>{course.name}</h1>
-
-      <section className="card stack">
-        <h2>Details</h2>
-        <ActionForm action={updateCourse} submitLabel="Save">
-          <SchoolSlugInput slug={schoolSlug} />
-          <input type="hidden" name="courseId" value={course.id} />
-          <div className="form-grid">
-            <label>
-              Code
-              <input name="code" defaultValue={course.code} required maxLength={32} />
-            </label>
-            <label>
-              Name
-              <input name="name" defaultValue={course.name} required maxLength={200} />
-            </label>
-            <label>
-              Description
-              <input name="description" defaultValue={course.description ?? ""} maxLength={1000} />
-            </label>
-          </div>
-        </ActionForm>
-      </section>
-
-      <section className="card stack">
-        <h2>Classes of this course</h2>
-        {course.classes.length === 0 ? (
-          <p className="muted">
-            None yet. <Link href={`${base}/classes`}>Create a class</Link>.
-          </p>
-        ) : (
-          <ul>
-            {course.classes.map((c) => (
-              <li key={c.id}>
-                <Link href={`${base}/classes/${c.id}`}>{c.name}</Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+    <div className="stack-lg">
+      <PageHeader back={{ href: `${base}/courses`, label: "Cursos" }} title={course.name} subtitle={`Código ${course.code}`} />
+      <div className="grid-main">
+        <Card title="Datos del curso">
+          <ActionForm action={updateCourse} submitLabel="Guardar">
+            <SchoolSlugInput slug={schoolSlug} />
+            <input type="hidden" name="courseId" value={course.id} />
+            <div className="form-grid">
+              <label>
+                Código
+                <input name="code" defaultValue={course.code} required maxLength={32} />
+              </label>
+              <label>
+                Nombre
+                <input name="name" defaultValue={course.name} required maxLength={200} />
+              </label>
+              <label>
+                Descripción
+                <input name="description" defaultValue={course.description ?? ""} maxLength={1000} />
+              </label>
+            </div>
+          </ActionForm>
+        </Card>
+        <Card title="Clases de este curso">
+          {course.classes.length === 0 ? (
+            <EmptyState icon={BookOpen} title="Ninguna todavía" compact action={<Link className="button secondary" href={`${base}/classes`}>Crear una clase</Link>} />
+          ) : (
+            <ul className="list">
+              {course.classes.map((c) => (
+                <li key={c.id} className="list-item">
+                  <span className="feed-icon tone-blue">
+                    <BookOpen size={15} />
+                  </span>
+                  <Link className="cell-title" href={`${base}/classes/${c.id}`}>
+                    {c.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

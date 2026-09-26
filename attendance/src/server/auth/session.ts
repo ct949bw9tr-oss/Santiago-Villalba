@@ -78,3 +78,14 @@ export async function requireRole(
   if (!hasRole(access, role)) notFound();
   return access;
 }
+
+export type MyProfile = { full_name: string; email: string | null };
+
+/** The caller's own profile (display name). Memoized per request. */
+export const getMyProfile = cache(async (): Promise<MyProfile | null> => {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle();
+  return data ? { full_name: data.full_name ?? "", email: data.email ?? user.email } : { full_name: "", email: user.email };
+});

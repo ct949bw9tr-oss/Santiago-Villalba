@@ -31,14 +31,14 @@ describe("parseReportFilters", () => {
 
   it("rejects impossible dates", () => {
     const r = parseReportFilters({ from: "2026-02-30", to: TODAY }, TODAY);
-    expect(r.error).toMatch(/Dates/);
+    expect(r.error).toMatch(/formato/);
     expect(r.filters.to).toBe(TODAY);
   });
 
   it("swaps a reversed range", () => {
     const r = parseReportFilters({ from: "2026-09-20", to: "2026-09-10" }, TODAY);
     expect(r.filters).toMatchObject({ from: "2026-09-10", to: "2026-09-20" });
-    expect(r.error).toMatch(/after/);
+    expect(r.error).toMatch(/posterior/);
   });
 
   it("caps the range at 366 days", () => {

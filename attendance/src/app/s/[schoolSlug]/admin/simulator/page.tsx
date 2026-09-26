@@ -1,10 +1,20 @@
+import Link from "next/link";
+import { CircleCheck, Clock, CloudCheck, Nfc, RadioTower, RefreshCw, UserCheck, UserX, WifiOff } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
 import { SchoolSlugInput } from "@/components/school-slug-input";
 import { formatUid } from "@/lib/nfc/uid";
-import { formatLocalTime, localDateKey, utcWindowAroundLocalDay } from "@/lib/time";
+import { localDateKey, utcWindowAroundLocalDay } from "@/lib/time";
+import { fmtLongDate, fmtTime } from "@/lib/ui/format";
+import { OUTCOME_LABEL, outcomeTone, type ScanOutcome } from "@/lib/ui/scan";
 import { requireRole } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { runAbsenceCheck, setSimulatorEnabled } from "@/server/admin/devices";
+import { Person } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBar } from "@/components/ui/rate";
+import { Badge, StatusBadge } from "@/components/ui/status-badge";
 import { Simulator } from "./simulator";
 
 type CardRow = { uid_normalized: string; student: { id: string; first_name: string; last_name: string; status: string } };
@@ -13,11 +23,11 @@ type ScanRow = {
   received_at: string;
   effective_at: string;
   uid_normalized: string;
-  outcome: string;
+  outcome: ScanOutcome;
   outcome_detail: string | null;
   device: { name: string; kind: string };
-  student: { first_name: string; last_name: string } | null;
-  record: { status: string } | null;
+  student: { id: string; first_name: string; last_name: string } | null;
+  record: { status: "present" | "late" | "absent" | "excused" } | null;
 };
 type SessionRow = {
   id: string;
@@ -26,10 +36,21 @@ type SessionRow = {
   status: string;
   finalized_at: string | null;
   class: { name: string };
-  records: { status: string }[];
+  records: { status: "present" | "late" | "absent" | "excused" }[];
 };
 
-const STATUSES = ["present", "late", "absent", "excused"] as const;
+export const metadata = { title: "Asistencia" };
+
+const STATES = [
+  { icon: UserCheck, tone: "tone-green", label: "Presente" },
+  { icon: Clock, tone: "tone-orange", label: "Tarde" },
+  { icon: UserX, tone: "tone-red", label: "Ausente" },
+  { icon: CircleCheck, tone: "tone-violet", label: "Excusado" },
+  { icon: RadioTower, tone: "tone-gray", label: "Lector desconectado" },
+  { icon: WifiOff, tone: "tone-red", label: "Sin internet" },
+  { icon: RefreshCw, tone: "tone-blue", label: "Sincronizando" },
+  { icon: CloudCheck, tone: "tone-green", label: "Sincronizado" },
+];
 
 export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlug]/admin/simulator">) {
   const { schoolSlug } = await params;
@@ -38,33 +59,10 @@ export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlu
   const schoolId = access.school.id;
   const tz = access.school.timezone;
 
-  const { data: school } = await supabase.from("schools").select("settings").eq("id", schoolId).single();
-  const enabled = Boolean(school?.settings?.simulator_enabled);
-
-  if (!enabled) {
-    return (
-      <div className="stack">
-        <h1>NFC simulator</h1>
-        <section className="card stack">
-          <p style={{ margin: 0 }}>
-            The simulator lets you tap a student&apos;s card from this page, before any physical reader is installed. Taps
-            go through the same attendance API that real readers use and are logged as coming from the simulator.
-          </p>
-          <p className="muted" style={{ margin: 0 }}>
-            Switch it off again once real readers are in use.
-          </p>
-          <ActionForm action={setSimulatorEnabled} submitLabel="Enable simulator">
-            <SchoolSlugInput slug={schoolSlug} />
-            <input type="hidden" name="enabled" value="true" />
-          </ActionForm>
-        </section>
-      </div>
-    );
-  }
-
   const now = new Date();
   const { from, to } = utcWindowAroundLocalDay(now);
-  const [{ data: cards }, { data: scans }, { data: sessions }] = await Promise.all([
+  const [{ data: school }, { data: cards }, { data: scans }, { data: sessions }] = await Promise.all([
+    supabase.from("schools").select("settings").eq("id", schoolId).single(),
     supabase
       .from("nfc_credentials")
       .select("uid_normalized, student:students!inner(id, first_name, last_name, status)")
@@ -74,7 +72,7 @@ export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlu
     supabase
       .from("scan_events")
       .select(
-        "id, received_at, effective_at, uid_normalized, outcome, outcome_detail, device:devices!inner(name, kind), student:students(first_name, last_name), record:attendance_records!scan_events_school_id_attendance_record_id_fkey(status)",
+        "id, received_at, effective_at, uid_normalized, outcome, outcome_detail, device:devices!inner(name, kind), student:students(id, first_name, last_name), record:attendance_records!scan_events_school_id_attendance_record_id_fkey(status)",
       )
       .eq("school_id", schoolId)
       .order("received_at", { ascending: false })
@@ -89,6 +87,7 @@ export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlu
       .order("starts_at")
       .returns<SessionRow[]>(),
   ]);
+  const enabled = Boolean(school?.settings?.simulator_enabled);
 
   const students = (cards ?? [])
     .filter((c) => c.student.status === "active")
@@ -100,126 +99,205 @@ export default async function SimulatorPage({ params }: PageProps<"/s/[schoolSlu
     .sort((a, b) => a.name.localeCompare(b.name));
   const today = localDateKey(now, tz);
   const todaysSessions = (sessions ?? []).filter((s) => localDateKey(new Date(s.starts_at), tz) === today);
+  const base = `/s/${schoolSlug}`;
 
   return (
-    <div className="stack">
-      <div>
-        <h1>NFC simulator</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          School time now: <strong>{formatLocalTime(now, tz)}</strong> ({tz})
-        </p>
+    <div className="stack-lg">
+      <PageHeader
+        title="Asistencia NFC"
+        subtitle={
+          <>
+            {fmtLongDate(now, tz)} · Hora del colegio: <strong>{fmtTime(now, tz)}</strong> ({tz})
+          </>
+        }
+        actions={
+          <Link className="button secondary" href={`${base}/admin/devices`}>
+            <RadioTower size={16} /> Lectores
+          </Link>
+        }
+      />
+
+      <div className="grid-main">
+        <div className="stack">
+          {enabled ? (
+            <>
+              {students.length === 0 && (
+                <div className="callout info">
+                  <Nfc size={18} />
+                  <p>Ningún estudiante tiene tarjeta NFC todavía: asígnala desde su perfil, o escribe cualquier UID abajo.</p>
+                </div>
+              )}
+              <Simulator schoolSlug={schoolSlug} timeZone={tz} students={students} />
+            </>
+          ) : (
+            <div className="nfc-stage offline">
+              <div className="nfc-rings">
+                <div className="nfc-core">
+                  <Nfc size={38} />
+                </div>
+              </div>
+              <h2>Simulador NFC desactivado</h2>
+              <p style={{ maxWidth: 440 }}>
+                El simulador permite registrar lecturas desde esta pantalla antes de instalar lectores físicos. Las lecturas pasan
+                por el mismo API de asistencia que usan los lectores reales y quedan registradas como del simulador.
+              </p>
+              <ActionForm action={setSimulatorEnabled} submitLabel="Activar simulador" className="inline">
+                <SchoolSlugInput slug={schoolSlug} />
+                <input type="hidden" name="enabled" value="true" />
+              </ActionForm>
+            </div>
+          )}
+        </div>
+
+        <div className="stack">
+          <Card
+            title="Clases de hoy"
+            subtitle={`${todaysSessions.length} programadas`}
+            action={
+              <ActionForm action={runAbsenceCheck} submitLabel="Cerrar clases vencidas" pendingLabel="Revisando…" variant="secondary" className="inline small" quiet>
+                <SchoolSlugInput slug={schoolSlug} />
+              </ActionForm>
+            }
+          >
+            {todaysSessions.length === 0 ? (
+              <EmptyState title="No hay clases hoy" compact />
+            ) : (
+              <div className="stack-sm">
+                {todaysSessions.map((s) => {
+                  const c = { present: 0, late: 0, absent: 0, excused: 0 };
+                  for (const r of s.records) c[r.status]++;
+                  const isLive = s.status !== "cancelled" && new Date(s.starts_at) <= now && now < new Date(s.ends_at);
+                  return (
+                    <Link key={s.id} href={`${base}/sessions/${s.id}`} className={`session-card${isLive ? " live" : ""}`} style={{ padding: "0.8rem" }}>
+                      <div className="row-between">
+                        <span className="cell-title truncate">{s.class.name}</span>
+                        {s.status === "cancelled" ? (
+                          <Badge>Cancelada</Badge>
+                        ) : isLive ? (
+                          <Badge tone="success">
+                            <span className="live-dot" /> En vivo
+                          </Badge>
+                        ) : s.finalized_at ? (
+                          <Badge tone="neutral">Cerrada</Badge>
+                        ) : (
+                          <span className="time-pill">
+                            {fmtTime(s.starts_at, tz)} – {fmtTime(s.ends_at, tz)}
+                          </span>
+                        )}
+                      </div>
+                      <StatusBar {...c} />
+                      <div className="stat-row">
+                        <span>
+                          <b>{c.present}</b> presentes
+                        </span>
+                        <span>
+                          <b>{c.late}</b> tarde
+                        </span>
+                        <span>
+                          <b>{c.absent}</b> ausentes
+                        </span>
+                        {c.excused > 0 && (
+                          <span>
+                            <b>{c.excused}</b> excusados
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+            <p className="hint" style={{ marginTop: "0.9rem" }}>
+              El cierre automático corre cada 5 minutos: cuando una clase pasa su hora límite, los inscritos sin lectura se marcan
+              ausentes.
+            </p>
+          </Card>
+
+          <Card title="Estados del sistema" subtitle="Cómo se ve cada estado en EduTrack">
+            <div className="state-grid">
+              {STATES.map((s) => (
+                <div key={s.label} className="state-chip">
+                  <span className={`feed-icon ${s.tone}`} style={{ width: 26, height: 26, borderRadius: 8 }}>
+                    <s.icon size={14} />
+                  </span>
+                  {s.label}
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
 
-      <section className="card stack">
-        {students.length === 0 && (
-          <p className="muted" style={{ margin: 0 }}>
-            No student has an NFC card yet — assign one from a student&apos;s page, or type any UID below.
-          </p>
-        )}
-        <Simulator schoolSlug={schoolSlug} timeZone={tz} students={students} />
-      </section>
-
-      <section className="card stack">
-        <div className="section-head">
-          <h2>Today&apos;s classes</h2>
-          <ActionForm action={runAbsenceCheck} submitLabel="Run absence check now" variant="secondary" className="inline small">
-            <SchoolSlugInput slug={schoolSlug} />
-          </ActionForm>
-        </div>
-        <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
-          The absence check runs automatically every 5 minutes: once a class passes its “absent after” time, enrolled
-          students without a tap are marked absent.
-        </p>
-        {todaysSessions.length === 0 ? (
-          <p className="muted">No classes today.</p>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Class</th>
-                  {STATUSES.map((s) => (
-                    <th key={s}>{s}</th>
-                  ))}
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {todaysSessions.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      {formatLocalTime(s.starts_at, tz)}–{formatLocalTime(s.ends_at, tz)}
-                    </td>
-                    <td>{s.class.name}</td>
-                    {STATUSES.map((st) => (
-                      <td key={st}>{s.records.filter((r) => r.status === st).length}</td>
-                    ))}
-                    <td>
-                      {s.status === "cancelled" ? (
-                        <span className="badge">cancelled</span>
-                      ) : (
-                        s.finalized_at && <span className="badge">closed</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="card stack">
-        <h2>Latest taps</h2>
+      <Card title="Últimas lecturas" subtitle="Lectores físicos y simulador" flush>
         {(scans ?? []).length === 0 ? (
-          <p className="muted">No taps yet.</p>
+          <EmptyState icon={Nfc} title="Aún no hay lecturas" compact />
         ) : (
-          <div className="table-wrap">
-            <table>
+          <div className="table-wrap" style={{ margin: 0, padding: 0 }}>
+            <table className="stack-mobile">
               <thead>
                 <tr>
-                  <th>Time</th>
-                  <th>Card</th>
-                  <th>Student</th>
-                  <th>Result</th>
-                  <th>From</th>
+                  <th style={{ paddingLeft: "1.35rem" }}>Estudiante</th>
+                  <th>Hora</th>
+                  <th>Resultado</th>
+                  <th className="hide-sm">Tarjeta</th>
+                  <th className="hide-sm">Origen</th>
                 </tr>
               </thead>
               <tbody>
                 {(scans ?? []).map((s) => (
                   <tr key={s.id}>
-                    <td>
-                      {formatLocalTime(s.effective_at, tz)}
-                      {s.outcome_detail === "simulated time" && <div className="muted">simulated</div>}
+                    <td style={{ paddingLeft: "1.35rem" }}>
+                      {s.student ? (
+                        <Person first={s.student.first_name} last={s.student.last_name} id={s.student.id} size="sm" href={`${base}/admin/students/${s.student.id}`} />
+                      ) : (
+                        <span className="muted">Tarjeta desconocida</span>
+                      )}
                     </td>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>{formatUid(s.uid_normalized)}</td>
-                    <td>{s.student ? `${s.student.first_name} ${s.student.last_name}` : "—"}</td>
-                    <td>
-                      <span className="badge">{s.outcome.replaceAll("_", " ")}</span>
-                      {s.record && <span className="muted"> {s.record.status}</span>}
+                    <td data-label="Hora" className="nowrap">
+                      {fmtTime(s.effective_at, tz)}
+                      {s.outcome_detail === "simulated time" && <div className="cell-sub">hora simulada</div>}
                     </td>
-                    <td>{s.device.name}</td>
+                    <td data-label="Resultado">
+                      <span className="inline">
+                        {s.record && s.outcome === "recorded" ? (
+                          <StatusBadge status={s.record.status} />
+                        ) : (
+                          <Badge tone={outcomeTone(s.outcome)}>{OUTCOME_LABEL[s.outcome] ?? s.outcome}</Badge>
+                        )}
+                      </span>
+                    </td>
+                    <td data-label="Tarjeta" className="mono hide-sm">
+                      {formatUid(s.uid_normalized)}
+                    </td>
+                    <td data-label="Origen" className="hide-sm">{s.device.kind === "simulator" ? "Simulador" : s.device.name}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </section>
+      </Card>
 
-      <section className="card stack">
-        <ActionForm
-          action={setSimulatorEnabled}
-          submitLabel="Disable simulator"
-          variant="secondary"
-          className="inline small"
-          confirmText="Disable the simulator for this school?"
-        >
-          <SchoolSlugInput slug={schoolSlug} />
-          <input type="hidden" name="enabled" value="false" />
-        </ActionForm>
-      </section>
+      {enabled && (
+        <div className="row-between card" style={{ flexWrap: "wrap" }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Simulador NFC activo</h3>
+            <p className="hint">Desactívalo cuando los lectores físicos estén en uso.</p>
+          </div>
+          <ActionForm
+            action={setSimulatorEnabled}
+            submitLabel="Desactivar simulador"
+            variant="secondary"
+            className="inline small"
+            confirmText="¿Desactivar el simulador para este colegio?"
+            confirmLabel="Desactivar"
+            quiet
+          >
+            <SchoolSlugInput slug={schoolSlug} />
+            <input type="hidden" name="enabled" value="false" />
+          </ActionForm>
+        </div>
+      )}
     </div>
   );
 }

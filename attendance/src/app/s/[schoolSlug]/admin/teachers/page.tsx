@@ -1,9 +1,15 @@
-import Link from "next/link";
+import { ChevronDown, Presentation, UserPlus } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
 import { SchoolSlugInput } from "@/components/school-slug-input";
 import { requireRole } from "@/server/auth/session";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { inviteTeacher } from "@/server/admin/teachers";
+import { ClassesTabs } from "@/components/shell/section-tabs";
+import { Person } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/status-badge";
 
 type Row = {
   id: string;
@@ -13,6 +19,8 @@ type Row = {
   status: string;
   classes: { id: string }[];
 };
+
+export const metadata = { title: "Docentes" };
 
 export default async function TeachersPage({ params }: PageProps<"/s/[schoolSlug]/admin/teachers">) {
   const { schoolSlug } = await params;
@@ -30,65 +38,72 @@ export default async function TeachersPage({ params }: PageProps<"/s/[schoolSlug
   const base = `/s/${schoolSlug}/admin/teachers`;
 
   return (
-    <div className="stack">
-      <h1>Teachers</h1>
+    <div className="stack-lg">
+      <PageHeader title="Clases" subtitle="Docentes del colegio y sus clases asignadas." />
+      <ClassesTabs slug={schoolSlug} active="teachers" />
 
-      <section className="card stack">
-        <h2>Add a teacher</h2>
-        <p className="muted" style={{ margin: 0 }}>
-          Creates their account and gives you a one-time sign-in link to send them (WhatsApp, email…). They open it and
-          choose their password.
-        </p>
-        <ActionForm action={inviteTeacher} submitLabel="Add teacher" resetOnSuccess>
-          <SchoolSlugInput slug={schoolSlug} />
-          <div className="form-grid">
-            <label>
-              Email
-              <input name="email" type="email" required maxLength={320} autoCapitalize="none" autoComplete="off" />
-            </label>
-            <label>
-              First name
-              <input name="first_name" required maxLength={100} />
-            </label>
-            <label>
-              Last name
-              <input name="last_name" required maxLength={100} />
-            </label>
-            <label>
-              Employee number (optional)
-              <input name="employee_number" maxLength={64} />
-            </label>
-          </div>
-        </ActionForm>
-      </section>
+      <details className="disclosure card" style={{ padding: 0 }} open={teachers.length === 0 || undefined}>
+        <summary>
+          <span className="kpi-icon tone-blue" style={{ width: 32, height: 32, borderRadius: 9 }}>
+            <UserPlus size={16} />
+          </span>
+          Agregar docente
+          <ChevronDown size={18} className="chev" />
+        </summary>
+        <div className="disclosure-body stack">
+          <p className="hint">
+            Crea su cuenta y te da un enlace de acceso de un solo uso para enviárselo (WhatsApp, correo…). Al abrirlo, elige su contraseña.
+          </p>
+          <ActionForm action={inviteTeacher} submitLabel="Agregar docente" resetOnSuccess>
+            <SchoolSlugInput slug={schoolSlug} />
+            <div className="form-grid">
+              <label>
+                Correo
+                <input name="email" type="email" required maxLength={320} autoCapitalize="none" autoComplete="off" />
+              </label>
+              <label>
+                Nombres
+                <input name="first_name" required maxLength={100} />
+              </label>
+              <label>
+                Apellidos
+                <input name="last_name" required maxLength={100} />
+              </label>
+              <label>
+                N.º de empleado (opcional)
+                <input name="employee_number" maxLength={64} />
+              </label>
+            </div>
+          </ActionForm>
+        </div>
+      </details>
 
-      <section className="card stack">
-        <h2>All teachers ({teachers.length})</h2>
+      <Card title={`Docentes (${teachers.length})`} flush>
         {teachers.length === 0 ? (
-          <p className="muted">No teachers yet.</p>
+          <EmptyState icon={Presentation} title="Aún no hay docentes" compact />
         ) : (
-          <div className="table-wrap">
-            <table>
+          <div className="table-wrap" style={{ margin: 0, padding: 0 }}>
+            <table className="stack-mobile">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Employee #</th>
-                  <th>Classes</th>
-                  <th>Status</th>
+                  <th style={{ paddingLeft: "1.35rem" }}>Docente</th>
+                  <th>N.º empleado</th>
+                  <th className="num">Clases</th>
+                  <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {teachers.map((t) => (
                   <tr key={t.id}>
-                    <td>
-                      <Link href={`${base}/${t.id}`}>
-                        {t.last_name}, {t.first_name}
-                      </Link>
+                    <td style={{ paddingLeft: "1.35rem" }}>
+                      <Person first={t.first_name} last={t.last_name} id={t.id} href={`${base}/${t.id}`} />
                     </td>
-                    <td>{t.employee_number ?? "—"}</td>
-                    <td>{t.classes.length}</td>
-                    <td>
-                      <span className="badge">{t.status}</span>
+                    <td data-label="N.º empleado">{t.employee_number ?? <span className="muted">—</span>}</td>
+                    <td data-label="Clases" className="num">
+                      {t.classes.length}
+                    </td>
+                    <td data-label="Estado">
+                      <Badge tone={t.status === "active" ? "success" : "neutral"}>{t.status === "active" ? "Activo" : "Inactivo"}</Badge>
                     </td>
                   </tr>
                 ))}
@@ -96,7 +111,7 @@ export default async function TeachersPage({ params }: PageProps<"/s/[schoolSlug
             </table>
           </div>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

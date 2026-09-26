@@ -12,7 +12,7 @@ const correctionSchema = z.object({
   sessionId: z.uuid(),
   studentId: z.uuid(),
   status: z.enum(["present", "late", "absent", "excused"]),
-  reason: z.string().trim().min(3, "Write a short reason (at least 3 characters)").max(500),
+  reason: z.string().trim().min(3, "Escribe un motivo breve (mínimo 3 caracteres)").max(500),
   expectedVersion: z
     .string()
     .optional()
@@ -28,7 +28,7 @@ const correctionSchema = z.object({
 export async function correctAttendance(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireSchoolAccess(String(formData.get("schoolSlug") ?? ""));
   if (!hasRole(access, "teacher") && !hasRole(access, "school_admin")) {
-    return { error: "You don't have permission to change attendance." };
+    return { error: "No tienes permiso para cambiar la asistencia." };
   }
 
   const parsed = correctionSchema.safeParse(Object.fromEntries(formData));
@@ -43,13 +43,13 @@ export async function correctAttendance(_prev: FormState, formData: FormData): P
     p_reason: reason,
     p_expected_version: expectedVersion ?? null,
   });
-  if (error?.code === "PT409") return { error: "Someone else just changed this student's attendance. Reload and try again." };
+  if (error?.code === "PT409") return { error: "Alguien acaba de cambiar la asistencia de este estudiante. Recarga e inténtalo de nuevo." };
   if (error) {
     return {
-      error: dbErrorMessage(error, { foreignKey: "This student isn't enrolled in this class on that date." }),
+      error: dbErrorMessage(error, { foreignKey: "Este estudiante no está inscrito en esta clase en esa fecha." }),
     };
   }
 
   refresh();
-  return { message: "Saved." };
+  return { message: "Cambios guardados." };
 }

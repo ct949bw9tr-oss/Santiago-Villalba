@@ -17,12 +17,12 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
     email: formData.get("email"),
     password: formData.get("password"),
   });
-  if (!parsed.success) return { error: "Enter a valid email and password." };
+  if (!parsed.success) return { error: "Escribe un correo y una contraseña válidos." };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   // Same message for unknown email and wrong password (no account enumeration).
-  if (error) return { error: "Invalid email or password." };
+  if (error) return { error: "Correo o contraseña incorrectos." };
 
   redirect("/");
 }
@@ -40,7 +40,7 @@ const setPasswordSchema = z
     password: z.string().min(MIN_PASSWORD_LENGTH).max(200),
     confirm: z.string(),
   })
-  .refine((v) => v.password === v.confirm, { message: "Passwords do not match." });
+  .refine((v) => v.password === v.confirm, { message: "Las contraseñas no coinciden." });
 
 /** Used after accepting an invitation (or a recovery link) to choose a password. */
 export async function setPassword(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -50,11 +50,11 @@ export async function setPassword(_prev: FormState, formData: FormData): Promise
     confirm: formData.get("confirm"),
   });
   if (!parsed.success) {
-    const mismatch = parsed.error.issues.some((i) => i.message === "Passwords do not match.");
+    const mismatch = parsed.error.issues.some((i) => i.message === "Las contraseñas no coinciden.");
     return {
       error: mismatch
-        ? "Passwords do not match."
-        : `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+        ? "Las contraseñas no coinciden."
+        : `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
     };
   }
 

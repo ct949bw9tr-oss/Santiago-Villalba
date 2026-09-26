@@ -17,20 +17,21 @@ export function PasswordForm() {
       }}
     >
       <label>
-        New password
+        Nueva contraseña
         <input name="password" type="password" autoComplete="new-password" minLength={10} required />
       </label>
       <label>
-        Confirm password
+        Confirmar contraseña
         <input name="confirm" type="password" autoComplete="new-password" minLength={10} required />
       </label>
       {state?.error && (
-        <p className="error" role="alert" style={{ margin: 0 }}>
-          {state.error}
-        </p>
+        <div className="callout danger" role="alert">
+          <p>{state.error}</p>
+        </div>
       )}
-      <button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save password"}
+      <p className="hint">Mínimo 10 caracteres.</p>
+      <button type="submit" className="lg" disabled={pending}>
+        {pending ? "Guardando…" : "Guardar contraseña"}
       </button>
     </form>
   );

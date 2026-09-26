@@ -20,7 +20,7 @@ export async function createClass(_prev: FormState, formData: FormData): Promise
     .select("id")
     .single();
   // A course_id from another school fails the composite foreign key.
-  if (error) return { error: dbErrorMessage(error, { foreignKey: "Pick a course from this school." }) };
+  if (error) return { error: dbErrorMessage(error, { foreignKey: "Elige un curso de este colegio." }) };
 
   redirect(`/s/${access.school.slug}/admin/classes/${data.id}`);
 }
@@ -29,7 +29,7 @@ export async function updateClass(_prev: FormState, formData: FormData): Promise
   const access = await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("classId"));
   const parsed = classSchema.safeParse(Object.fromEntries(formData));
-  if (!id.success) return { error: "Unknown class." };
+  if (!id.success) return { error: "Clase desconocida." };
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 
   const supabase = await createSupabaseServerClient();
@@ -39,18 +39,18 @@ export async function updateClass(_prev: FormState, formData: FormData): Promise
     .eq("id", id.data)
     .eq("school_id", access.school.id)
     .select("id");
-  if (error) return { error: dbErrorMessage(error, { foreignKey: "Pick a course from this school." }) };
-  if (!data?.length) return { error: "Unknown class." };
+  if (error) return { error: dbErrorMessage(error, { foreignKey: "Elige un curso de este colegio." }) };
+  if (!data?.length) return { error: "Clase desconocida." };
 
   refresh();
-  return { message: "Saved." };
+  return { message: "Cambios guardados." };
 }
 
 export async function addClassTeacher(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const classId = uuid.safeParse(formData.get("classId"));
   const teacherId = uuid.safeParse(formData.get("teacherId"));
-  if (!classId.success || !teacherId.success) return { error: "Pick a teacher." };
+  if (!classId.success || !teacherId.success) return { error: "Elige un docente." };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("class_teachers").insert({
@@ -59,30 +59,30 @@ export async function addClassTeacher(_prev: FormState, formData: FormData): Pro
     teacher_id: teacherId.data,
     role: formData.get("role") === "assistant" ? "assistant" : "primary",
   });
-  if (error) return { error: dbErrorMessage(error, { unique: "That teacher is already assigned." }) };
+  if (error) return { error: dbErrorMessage(error, { unique: "Ese docente ya está asignado." }) };
 
   refresh();
-  return { message: "Teacher assigned." };
+  return { message: "Docente asignado." };
 }
 
 export async function removeClassTeacher(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("assignmentId"));
-  if (!id.success) return { error: "Unknown assignment." };
+  if (!id.success) return { error: "Asignación desconocida." };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("class_teachers").delete().eq("id", id.data).eq("school_id", access.school.id);
   if (error) return { error: dbErrorMessage(error) };
 
   refresh();
-  return { message: "Removed." };
+  return { message: "Eliminado." };
 }
 
 export async function addSchedule(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const classId = uuid.safeParse(formData.get("classId"));
   const parsed = scheduleSchema.safeParse(Object.fromEntries(formData));
-  if (!classId.success) return { error: "Unknown class." };
+  if (!classId.success) return { error: "Clase desconocida." };
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 
   const supabase = await createSupabaseServerClient();
@@ -102,20 +102,20 @@ export async function addSchedule(_prev: FormState, formData: FormData): Promise
   if (genError) return { error: dbErrorMessage(genError) };
 
   refresh();
-  return { message: `Time slot added; ${created ?? 0} upcoming sessions created.` };
+  return { message: `Franja agregada; se crearon ${created ?? 0} sesiones próximas.` };
 }
 
 export async function removeSchedule(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("scheduleId"));
-  if (!id.success) return { error: "Unknown time slot." };
+  if (!id.success) return { error: "Franja desconocida." };
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("remove_class_schedule", { p_schedule_id: id.data });
   if (error) return { error: dbErrorMessage(error) };
 
   refresh();
-  return { message: `Time slot removed (${data ?? 0} future sessions deleted).` };
+  return { message: `Franja eliminada (se borraron ${data ?? 0} sesiones futuras).` };
 }
 
 export async function generateSessions(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -128,18 +128,18 @@ export async function generateSessions(_prev: FormState, formData: FormData): Pr
   if (error) return { error: dbErrorMessage(error) };
 
   refresh();
-  return { message: `${data ?? 0} new sessions created for the next ${SESSION_HORIZON_DAYS} days.` };
+  return { message: `Se crearon ${data ?? 0} sesiones nuevas para los próximos ${SESSION_HORIZON_DAYS} días.` };
 }
 
 export async function enrollStudents(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const classId = uuid.safeParse(formData.get("classId"));
-  if (!classId.success) return { error: "Unknown class." };
+  if (!classId.success) return { error: "Clase desconocida." };
   const studentIds = formData
     .getAll("studentIds")
     .map((v) => uuid.safeParse(v))
     .flatMap((r) => (r.success ? [r.data] : []));
-  if (studentIds.length === 0) return { error: "Select at least one student." };
+  if (studentIds.length === 0) return { error: "Selecciona al menos un estudiante." };
 
   const supabase = await createSupabaseServerClient();
   const { data: open } = await supabase
@@ -150,7 +150,7 @@ export async function enrollStudents(_prev: FormState, formData: FormData): Prom
     .is("withdrawn_on", null);
   const already = new Set((open ?? []).map((e) => e.student_id as string));
   const toAdd = studentIds.filter((id) => !already.has(id));
-  if (toAdd.length === 0) return { message: "Those students are already enrolled." };
+  if (toAdd.length === 0) return { message: "Esos estudiantes ya estaban inscritos." };
 
   const today = schoolToday(access.school.timezone);
   const { error } = await supabase.from("enrollments").insert(
@@ -161,10 +161,10 @@ export async function enrollStudents(_prev: FormState, formData: FormData): Prom
       enrolled_on: today,
     })),
   );
-  if (error) return { error: dbErrorMessage(error, { foreignKey: "Pick students from this school." }) };
+  if (error) return { error: dbErrorMessage(error, { foreignKey: "Elige estudiantes de este colegio." }) };
 
   refresh();
-  return { message: `${toAdd.length} student${toAdd.length === 1 ? "" : "s"} enrolled.` };
+  return { message: `${toAdd.length} estudiante${toAdd.length === 1 ? "" : "s"} inscrito${toAdd.length === 1 ? "" : "s"}.` };
 }
 
 /**
@@ -174,7 +174,7 @@ export async function enrollStudents(_prev: FormState, formData: FormData): Prom
 export async function unenrollStudent(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("enrollmentId"));
-  if (!id.success) return { error: "Unknown enrollment." };
+  if (!id.success) return { error: "Inscripción desconocida." };
 
   const supabase = await createSupabaseServerClient();
   const today = schoolToday(access.school.timezone);
@@ -185,7 +185,7 @@ export async function unenrollStudent(_prev: FormState, formData: FormData): Pro
     .eq("school_id", access.school.id)
     .is("withdrawn_on", null)
     .maybeSingle();
-  if (!enrollment) return { error: "Unknown enrollment." };
+  if (!enrollment) return { error: "Inscripción desconocida." };
 
   const { error } =
     enrollment.enrolled_on >= today
@@ -194,13 +194,13 @@ export async function unenrollStudent(_prev: FormState, formData: FormData): Pro
   if (error) return { error: dbErrorMessage(error) };
 
   refresh();
-  return { message: "Student removed from the class." };
+  return { message: "Estudiante retirado de la clase." };
 }
 
 export async function setSessionStatus(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("sessionId"));
-  if (!id.success) return { error: "Unknown session." };
+  if (!id.success) return { error: "Sesión desconocida." };
   const cancel = formData.get("status") === "cancelled";
 
   const supabase = await createSupabaseServerClient();
@@ -212,8 +212,8 @@ export async function setSessionStatus(_prev: FormState, formData: FormData): Pr
     .neq("status", "completed")
     .select("id");
   if (error) return { error: dbErrorMessage(error) };
-  if (!data?.length) return { error: "Session not found or already completed." };
+  if (!data?.length) return { error: "La sesión no existe o ya finalizó." };
 
   refresh();
-  return { message: cancel ? "Session cancelled." : "Session restored." };
+  return { message: cancel ? "Sesión cancelada." : "Sesión restaurada." };
 }

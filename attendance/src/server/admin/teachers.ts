@@ -45,7 +45,7 @@ export async function inviteTeacher(_prev: FormState, formData: FormData): Promi
       email,
       options: { data: { full_name: `${first_name} ${last_name}` } },
     });
-    if (error || !data.user) return { error: `Couldn't create the account: ${error?.message ?? "unknown error"}` };
+    if (error || !data.user) return { error: `No se pudo crear la cuenta: ${error?.message ?? "error desconocido"}` };
     userId = data.user.id;
     link = confirmLink(await appOrigin(), data.properties.hashed_token, "invite");
   } else {
@@ -55,7 +55,7 @@ export async function inviteTeacher(_prev: FormState, formData: FormData): Promi
       .eq("school_id", access.school.id)
       .eq("user_id", userId)
       .maybeSingle();
-    if (already) return { error: "That person is already a teacher in this school." };
+    if (already) return { error: "Esa persona ya es docente en este colegio." };
   }
 
   // 2. Membership (server-only write) — reactivates a previously disabled one.
@@ -75,19 +75,19 @@ export async function inviteTeacher(_prev: FormState, formData: FormData): Promi
     last_name,
     employee_number,
   });
-  if (teacherError) return { error: dbErrorMessage(teacherError, { unique: "That employee number is already in use." }) };
+  if (teacherError) return { error: dbErrorMessage(teacherError, { unique: "Ese número de empleado ya está en uso." }) };
 
   refresh();
   return link
-    ? { message: `${first_name} ${last_name} added.`, link }
-    : { message: `${first_name} ${last_name} already had an account and was added. They can sign in with their existing password.` };
+    ? { message: `${first_name} ${last_name} fue agregado.`, link }
+    : { message: `${first_name} ${last_name} ya tenía cuenta y fue agregado. Puede ingresar con su contraseña actual.` };
 }
 
 export async function updateTeacher(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("teacherId"));
   const parsed = teacherUpdateSchema.safeParse(Object.fromEntries(formData));
-  if (!id.success) return { error: "Unknown teacher." };
+  if (!id.success) return { error: "Docente desconocido." };
   if (!parsed.success) return { error: firstIssue(parsed.error) };
 
   const supabase = await createSupabaseServerClient();
@@ -97,8 +97,8 @@ export async function updateTeacher(_prev: FormState, formData: FormData): Promi
     .eq("id", id.data)
     .eq("school_id", access.school.id)
     .select("user_id");
-  if (error) return { error: dbErrorMessage(error, { unique: "That employee number is already in use." }) };
-  if (!data?.length) return { error: "Unknown teacher." };
+  if (error) return { error: dbErrorMessage(error, { unique: "Ese número de empleado ya está en uso." }) };
+  if (!data?.length) return { error: "Docente desconocido." };
 
   // Deactivating a teacher also blocks their sign-in to this school.
   const { error: membershipError } = await supabase
@@ -110,7 +110,7 @@ export async function updateTeacher(_prev: FormState, formData: FormData): Promi
   if (membershipError) return { error: dbErrorMessage(membershipError) };
 
   refresh();
-  return { message: "Saved." };
+  return { message: "Cambios guardados." };
 }
 
 /**
@@ -122,7 +122,7 @@ export async function updateTeacher(_prev: FormState, formData: FormData): Promi
 export async function teacherSignInLink(_prev: FormState, formData: FormData): Promise<FormState> {
   const access = await requireAdminFromForm(formData);
   const id = uuid.safeParse(formData.get("teacherId"));
-  if (!id.success) return { error: "Unknown teacher." };
+  if (!id.success) return { error: "Docente desconocido." };
 
   const supabase = await createSupabaseServerClient();
   const { data: teacher } = await supabase
@@ -131,7 +131,7 @@ export async function teacherSignInLink(_prev: FormState, formData: FormData): P
     .eq("id", id.data)
     .eq("school_id", access.school.id)
     .maybeSingle();
-  if (!teacher) return { error: "Unknown teacher." };
+  if (!teacher) return { error: "Docente desconocido." };
 
   const admin = createSupabaseAdminClient();
   const [{ data: memberships }, { data: profile }, { data: authUser }] = await Promise.all([
@@ -144,19 +144,19 @@ export async function teacherSignInLink(_prev: FormState, formData: FormData): P
   if (otherSchool || profile?.is_platform_admin) {
     return {
       error:
-        "This account also belongs to another school, so a link can't be generated here. Ask them to reset their password from the sign-in page.",
+        "Esta cuenta también pertenece a otro colegio, así que no se puede generar el enlace aquí. Pídele que restablezca su contraseña desde la página de inicio de sesión.",
     };
   }
   const email = authUser?.user?.email ?? profile?.email;
-  if (!email) return { error: "This account has no email address." };
+  if (!email) return { error: "Esta cuenta no tiene correo electrónico." };
 
   // Unconfirmed (never accepted) accounts get a magic link; others a recovery link.
   const type = authUser?.user?.email_confirmed_at ? "recovery" : "magiclink";
   const { data, error } = await admin.auth.admin.generateLink({ type, email });
-  if (error) return { error: `Couldn't create a link: ${error.message}` };
+  if (error) return { error: `No se pudo crear el enlace: ${error.message}` };
 
   return {
-    message: "Link created. It works once and expires in about an hour.",
+    message: "Enlace creado. Funciona una sola vez y vence en aproximadamente una hora.",
     link: confirmLink(await appOrigin(), data.properties.hashed_token, type),
   };
 }

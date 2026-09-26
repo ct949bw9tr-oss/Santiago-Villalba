@@ -94,3 +94,55 @@ export async function fetchRecords(
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+export type Totals = { present: number; late: number; absent: number; excused: number; sessions: number };
+export type Bucket = { from: string; to: string; label: string };
+
+export const EMPTY_TOTALS: Totals = { present: 0, late: 0, absent: 0, excused: 0, sessions: 0 };
+
+export function sumClassTotals(rows: ClassSummary[]): Totals {
+  return rows.reduce(
+    (t, c) => ({
+      present: t.present + Number(c.present),
+      late: t.late + Number(c.late),
+      absent: t.absent + Number(c.absent),
+      excused: t.excused + Number(c.excused),
+      sessions: t.sessions + Number(c.sessions),
+    }),
+    { ...EMPTY_TOTALS },
+  );
+}
+
+/**
+ * Status totals per date bucket (school-local days), e.g. one bucket per day
+ * for a trend line. One aggregate RPC per bucket, run in parallel; callers
+ * keep the number of buckets small (≤ 31).
+ */
+export async function fetchBucketTotals(
+  supabase: Supabase,
+  schoolId: string,
+  buckets: Bucket[],
+  classId: string | null = null,
+): Promise<(Totals & Bucket)[]> {
+  const results = await Promise.all(
+    buckets.map((b) => supabase.rpc("attendance_summary_by_class", { p_school_id: schoolId, p_from: b.from, p_to: b.to })),
+  );
+  return results.map((r, i) => {
+    if (r.error) throw new Error(r.error.message);
+    let rows = (r.data ?? []) as ClassSummary[];
+    if (classId) rows = rows.filter((c) => c.class_section_id === classId);
+    return { ...buckets[i], ...sumClassTotals(rows) };
+  });
+}
+
+/** Splits [from, to] into at most `max` consecutive buckets of whole days. */
+export function splitRange(from: string, to: string, max = 31): { from: string; to: string }[] {
+  const days = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1;
+  const size = Math.max(1, Math.ceil(days / max));
+  const out: { from: string; to: string }[] = [];
+  for (let start = from; start <= to; start = addDays(start, size)) {
+    const end = addDays(start, size - 1);
+    out.push({ from: start, to: end > to ? to : end });
+  }
+  return out;
+}
