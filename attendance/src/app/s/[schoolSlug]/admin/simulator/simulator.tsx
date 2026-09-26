@@ -5,24 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Clock, Nfc, RefreshCw, RotateCcw, WifiOff, X } from "lucide-react";
 import { wallTimeInZone, zonedWallTimeToUtc } from "@/lib/time";
 import { fmtTime, STATUS_LABEL } from "@/lib/ui/format";
-import { OUTCOME_HINT, OUTCOME_LABEL, type ScanOutcome } from "@/lib/ui/scan";
+import { describeScan, type ScanBody, type ScanView } from "@/lib/ui/scan";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 type Student = { id: string; name: string; uid: string };
-type AttendanceStatus = "present" | "late" | "absent" | "excused";
-
-type ScanBody = {
-  outcome?: ScanOutcome;
-  feedback?: "accept" | "warn" | "reject";
-  message?: string;
-  replayed?: boolean;
-  error?: string;
-  effective_at?: string;
-  attendance?: { status: AttendanceStatus; class_name: string; checked_in_at: string | null } | null;
-  student?: { display_name: string } | null;
-  [k: string]: unknown;
-};
-type ScanResult = { httpStatus: number; key: string; body: ScanBody; network?: boolean };
+type ScanResult = { httpStatus: number; key: string; body: ScanBody & Record<string, unknown>; network?: boolean };
 
 type Conn = "online" | "offline" | "syncing" | "synced";
 
@@ -33,33 +20,9 @@ const CONN_LABEL: Record<Conn, string> = {
   synced: "Sincronizado",
 };
 
-const ERROR_LABEL: Record<string, string> = {
-  simulator_disabled: "El simulador está desactivado",
-  simulator_missing: "El colegio no tiene dispositivo simulador",
-  not_an_admin: "Solo un administrador puede usar el simulador",
-  not_signed_in: "Tu sesión expiró; vuelve a iniciar sesión",
-  school_suspended: "Colegio suspendido",
-  missing_credentials: "Sesión no válida",
-  invalid_body: "UID de tarjeta no válido",
-  invalid_response: "Respuesta inválida del servidor",
-  "scanned_at must be within 24 hours of now": "La hora simulada debe estar dentro de las últimas/próximas 24 horas",
-};
-
-function resultView(r: ScanResult) {
-  const b = r.body;
-  if (r.network) return { tone: "reject" as const, title: "Sin conexión", hint: "No se pudo contactar al servidor. Revisa tu conexión a internet e inténtalo de nuevo." };
-  if (!b.outcome) return { tone: "reject" as const, title: ERROR_LABEL[b.error ?? ""] ?? "No se pudo registrar", hint: b.error ? `Código: ${b.error}` : undefined };
-  if (b.outcome === "recorded") {
-    const st = b.attendance?.status;
-    const title =
-      st === "late" ? "Llegada tarde registrada" : st === "absent" ? "Registrado como ausente" : st === "excused" ? "Excusa registrada" : "Asistencia registrada";
-    return { tone: st === "present" || st === "excused" ? ("accept" as const) : ("warn" as const), title, hint: undefined };
-  }
-  return {
-    tone: b.feedback === "warn" ? ("warn" as const) : ("reject" as const),
-    title: OUTCOME_LABEL[b.outcome] ?? b.message ?? "No se pudo registrar",
-    hint: OUTCOME_HINT[b.outcome],
-  };
+function resultView(r: ScanResult): ScanView {
+  if (r.network) return { tone: "reject", title: "Sin conexión", hint: "No se pudo contactar al servidor. Revisa tu conexión a internet e inténtalo de nuevo." };
+  return describeScan(r.body);
 }
 
 /**

@@ -1,4 +1,4 @@
-import { ChevronDown, Cpu, Plus, RadioTower } from "lucide-react";
+import { ChevronDown, Cpu, ExternalLink, MonitorSmartphone, Plus, RadioTower } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
 import { SchoolSlugInput } from "@/components/school-slug-input";
 import { fmtShortDate, fmtTime } from "@/lib/ui/format";
@@ -46,6 +46,27 @@ export default async function DevicesPage({ params }: PageProps<"/s/[schoolSlug]
     <div className="stack-lg">
       <PageHeader title="Configuración" subtitle="Los lectores NFC envían cada toque al API de asistencia con su propio token." />
       <SettingsTabs slug={schoolSlug} active="devices" />
+
+      <section className="card row" style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
+        <span className="kpi-icon tone-blue">
+          <MonitorSmartphone size={20} />
+        </span>
+        <div className="grow stack-sm" style={{ minWidth: 240 }}>
+          <h2 style={{ margin: 0 }}>Pantalla de lector (modo kiosco)</h2>
+          <p className="text-2" style={{ margin: 0 }}>
+            Conecta un lector NFC USB “tipo teclado” a una tablet, iPad o computador del salón (o usa un teléfono Android con NFC),
+            abre la pantalla de lector y pega el token del lector. Cada tarjeta que acerquen queda registrada al instante.
+          </p>
+          <ol className="hint" style={{ margin: 0, paddingLeft: "1.1rem" }}>
+            <li>Crea un lector abajo (o pide “Nuevo token”).</li>
+            <li>En el aparato del salón abre el enlace que aparece, o abre /kiosk y pega el token.</li>
+            <li>Deja la pantalla abierta: muestra “Acerca la tarjeta NFC”.</li>
+          </ol>
+        </div>
+        <a className="button secondary" href="/kiosk" target="_blank" rel="noopener">
+          <ExternalLink size={15} /> Abrir pantalla de lector
+        </a>
+      </section>
 
       <details className="disclosure card" style={{ padding: 0 }}>
         <summary>

@@ -6,7 +6,9 @@ import { publicEnv } from "@/lib/env";
 // signed-out visitors to /login. This is an optimistic check only: real
 // authorization happens server-side in src/server/auth/session.ts and in RLS.
 
-const PUBLIC_PATHS = ["/login", "/auth/confirm", "/no-access"];
+// /kiosk is the classroom reader screen: it authenticates with the reader's
+// device token (in the browser), never with a user session.
+const PUBLIC_PATHS = ["/login", "/auth/confirm", "/no-access", "/kiosk"];
 
 export async function proxy(request: NextRequest) {
   let env: ReturnType<typeof publicEnv>;

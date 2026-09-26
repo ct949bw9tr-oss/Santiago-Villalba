@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { generateDeviceToken, hashDeviceToken } from "@/server/attendance/tokens";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
-import { dbErrorMessage, requireAdminFromForm, type FormState } from "./common";
+import { appOrigin, dbErrorMessage, requireAdminFromForm, type FormState } from "./common";
 import { firstIssue, uuid } from "./schemas";
 
 const readerSchema = z.object({
@@ -32,7 +32,13 @@ async function issueToken(deviceId: string): Promise<FormState> {
     p_token_last4: token.slice(-4),
   });
   if (error) return { error: dbErrorMessage(error) };
-  return { message: "Token creado.", secret: { label: TOKEN_LABEL, value: token } };
+  // The token travels in the URL fragment, which browsers never send to a server.
+  return {
+    message: "Token creado.",
+    secret: { label: TOKEN_LABEL, value: token },
+    link: `${await appOrigin()}/kiosk#token=${token}`,
+    linkLabel: "O abre este enlace en el aparato del salón (configura la pantalla de lector de una vez):",
+  };
 }
 
 export async function createReader(_prev: FormState, formData: FormData): Promise<FormState> {

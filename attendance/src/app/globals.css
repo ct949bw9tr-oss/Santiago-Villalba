@@ -2846,3 +2846,166 @@ a.event:hover {
   padding: 0.8rem 1.1rem;
   border-top: 1px solid var(--border);
 }
+
+/* ---------- Kiosk (classroom reader screen) ---------- */
+
+.kiosk {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  background:
+    radial-gradient(70% 55% at 50% 35%, rgba(47, 91, 234, 0.4), transparent 70%),
+    linear-gradient(180deg, var(--navy-800), var(--navy-950));
+  user-select: none;
+  overflow: hidden;
+}
+
+.kiosk-setup {
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  color: var(--text);
+  user-select: auto;
+}
+
+.kiosk-capture {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  left: -100px;
+}
+
+.kiosk-bar,
+.kiosk-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+}
+
+.kiosk-school {
+  font-weight: 700;
+}
+
+.kiosk-sub {
+  color: #b7c3ec;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.kiosk-icon {
+  color: #c9d3f5;
+}
+
+.kiosk-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: transparent;
+}
+
+.kiosk-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.kiosk-rings {
+  width: 200px;
+  height: 200px;
+}
+
+.kiosk-rings .nfc-core {
+  width: 132px;
+  height: 132px;
+}
+
+.kiosk-center.busy .nfc-core {
+  animation: breathe 0.9s ease-in-out infinite;
+}
+
+.kiosk-center.offline .nfc-core {
+  background: linear-gradient(135deg, #59627e, #3a425c);
+  box-shadow: none;
+}
+
+.kiosk-title {
+  color: #fff;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  margin: 0;
+}
+
+.kiosk-result {
+  max-width: 520px;
+  padding: 1.75rem;
+}
+
+.kiosk-result .res-title {
+  font-size: 1.45rem;
+  color: var(--text);
+}
+
+.kiosk-result p {
+  color: var(--text-2);
+}
+
+.kiosk-result .check-circle {
+  width: 64px;
+  height: 64px;
+}
+
+.kiosk-result .res-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kiosk-name {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.kiosk-foot {
+  color: #b7c3ec;
+  font-size: 0.9rem;
+}
+
+.kiosk-clock {
+  color: #fff;
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-menu {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  width: min(380px, calc(100vw - 2rem));
+  z-index: 70;
+  color: var(--text);
+  user-select: auto;
+}
+
+@media (max-width: 640px) {
+  .kiosk-result .res-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kiosk-rings {
+    width: 160px;
+    height: 160px;
+  }
+
+  .kiosk-rings .nfc-core {
+    width: 104px;
+    height: 104px;
+  }
+}

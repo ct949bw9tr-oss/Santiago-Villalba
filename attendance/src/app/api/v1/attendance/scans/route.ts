@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { authenticateReader, authenticateSimulator, type AuthResult } from "@/server/attendance/scan-context";
 import { processScan } from "@/server/attendance/process-scan";
 import { effectiveScanTime, idempotencyKeySchema, scanRequestSchema } from "@/server/attendance/scan-request";
+import { normalizeUid } from "@/lib/nfc/uid";
 
 // POST /api/v1/attendance/scans — the one ingestion endpoint for card taps.
 // Registered readers authenticate with `Authorization: Bearer <token>`; the
@@ -51,7 +52,9 @@ export async function POST(request: NextRequest) {
 
   // --- The engine ---
   const result = await processScan(auth.ctx, {
-    uid: parsed.data.uid,
+    // Canonical hex (also converts decimal output of keyboard-emulation
+    // readers); anything unparseable is passed through and logged as unknown.
+    uid: normalizeUid(parsed.data.uid) ?? parsed.data.uid,
     idempotencyKey: key.data,
     effectiveAt: time.effectiveAt,
     deviceScannedAt: parsed.data.scanned_at,
