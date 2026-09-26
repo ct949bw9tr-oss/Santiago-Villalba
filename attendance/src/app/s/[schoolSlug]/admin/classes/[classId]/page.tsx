@@ -92,7 +92,7 @@ export default async function ClassPage({ params }: PageProps<"/s/[schoolSlug]/a
       .select("id, starts_at, ends_at, status, room")
       .eq("school_id", schoolId)
       .eq("class_section_id", cls.id)
-      .gte("ends_at", now.toISOString())
+      .gte("starts_at", new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString())
       .lt("starts_at", horizon.toISOString())
       .order("starts_at")
       .returns<Session[]>(),
@@ -327,7 +327,7 @@ export default async function ClassPage({ params }: PageProps<"/s/[schoolSlug]/a
       {/* Upcoming sessions */}
       <section className="card stack">
         <div className="section-head">
-          <h2>Next 14 days</h2>
+          <h2>Sessions (last 24 hours and next 14 days)</h2>
           <ActionForm action={generateSessions} submitLabel="Regenerate sessions" variant="secondary" className="inline small">
             <SchoolSlugInput slug={schoolSlug} />
           </ActionForm>
@@ -340,7 +340,9 @@ export default async function ClassPage({ params }: PageProps<"/s/[schoolSlug]/a
               <tbody>
                 {(sessions.data ?? []).map((s) => (
                   <tr key={s.id}>
-                    <td>{formatLocalDate(s.starts_at, tz)}</td>
+                    <td>
+                      <Link href={`/s/${schoolSlug}/sessions/${s.id}`}>{formatLocalDate(s.starts_at, tz)}</Link>
+                    </td>
                     <td>
                       {formatLocalTime(s.starts_at, tz)}–{formatLocalTime(s.ends_at, tz)}
                     </td>

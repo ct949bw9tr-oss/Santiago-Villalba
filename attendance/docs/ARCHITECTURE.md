@@ -1,6 +1,6 @@
 # School Attendance SaaS — Architecture (v0.2)
 
-Status: **approved; Phases 1–3 implemented** (see §7 and §8 for what was built
+Status: **approved; Phases 1–4 implemented** (see §7 and §8 for what was built
 and the decisions taken).
 
 Scope: a multi-school (multi-tenant) SaaS that records class attendance from
@@ -516,6 +516,13 @@ can be revisited.
   simulator) and its taps are attributed to that school's simulator device;
   it may simulate a tap time within ±24 h (tagged "simulated time").
   Readers' own clocks are trusted only within ±2 minutes.
+* Phase 4 — corrections go through `correct_attendance` (teacher of the class
+  or school admin; reason 3-500 chars; optimistic locking via `version`). A
+  stale version raises SQLSTATE `PT409`, which PostgREST maps to HTTP 409;
+  **never use 40001** for application conflicts, because PostgREST retries
+  serialization failures and the request would hang. Teachers can read the
+  audit trail of their own classes' records. The session page refreshes via
+  Supabase Realtime with a 10-second polling fallback.
 * Supabase-specific: every new table must revoke the default `anon` /
   `authenticated` grants (Supabase adds them automatically).
 * Queries must filter by the active `school_id` even though RLS already
