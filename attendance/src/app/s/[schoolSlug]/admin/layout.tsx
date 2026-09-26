@@ -11,6 +11,8 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/s/
     { href: `${base}/courses`, label: "Courses" },
     { href: `${base}/classes`, label: "Classes" },
     { href: `${base}/rules`, label: "Attendance rules" },
+    { href: `${base}/devices`, label: "Devices" },
+    { href: `${base}/simulator`, label: "NFC simulator" },
   ];
 
   return (
