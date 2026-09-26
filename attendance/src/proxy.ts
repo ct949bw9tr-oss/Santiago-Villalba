@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { publicEnv } from "@/lib/env";
 
 // Refreshes the Supabase session cookie on every page request and bounces
 // signed-out visitors to /login. This is an optimistic check only: real
@@ -8,11 +9,19 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/login", "/auth/confirm", "/no-access"];
 
 export async function proxy(request: NextRequest) {
+  let env: ReturnType<typeof publicEnv>;
+  try {
+    env = publicEnv();
+  } catch (err) {
+    // Misconfigured deployment: say which variable is wrong instead of a blank 500.
+    return new NextResponse(err instanceof Error ? err.message : "Server misconfigured", { status: 500 });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       cookies: {
         getAll() {
