@@ -100,7 +100,7 @@ begin
     create extension if not exists pg_cron with schema pg_catalog;
     perform cron.schedule(
       'generate-upcoming-class-sessions',
-      '17 7 * * *',  -- daily 07:17 UTC (02:17 in Bogotá)
+      '17 7 * * *',  -- daily 07:17 UTC (02:17 in Bogota)
       'select public.generate_upcoming_sessions(28)'
     );
   end if;

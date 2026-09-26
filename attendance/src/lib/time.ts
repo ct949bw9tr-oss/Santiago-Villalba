@@ -42,3 +42,44 @@ export function formatLocalDate(instant: Date | string, timeZone: string, locale
     day: "numeric",
   }).format(new Date(instant));
 }
+
+/** Offset of `timeZone` from UTC at `instant`, in milliseconds. */
+function timeZoneOffsetMs(instant: Date, timeZone: string): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    })
+      .formatToParts(instant)
+      .map((p) => [p.type, p.value]),
+  );
+  const asUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+  return asUtc - Math.floor(instant.getTime() / 1000) * 1000;
+}
+
+/**
+ * Converts a wall-clock time in `timeZone` ("YYYY-MM-DDTHH:mm", as produced by
+ * <input type="datetime-local">) to the UTC instant it denotes. Independent of
+ * the viewer's own timezone.
+ */
+export function zonedWallTimeToUtc(local: string, timeZone: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local);
+  if (!m) throw new Error(`Invalid local time: ${local}`);
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  // Two passes settle the offset correctly around DST changes.
+  let utc = guess - timeZoneOffsetMs(new Date(guess), timeZone);
+  utc = guess - timeZoneOffsetMs(new Date(utc), timeZone);
+  return new Date(utc);
+}
+
+/** "YYYY-MM-DDTHH:mm" wall-clock time of `instant` in `timeZone`. */
+export function wallTimeInZone(instant: Date, timeZone: string): string {
+  const offset = timeZoneOffsetMs(instant, timeZone);
+  return new Date(instant.getTime() + offset).toISOString().slice(0, 16);
+}
