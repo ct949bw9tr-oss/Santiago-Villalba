@@ -1,0 +1,8 @@
+{
+  "name": "Lector EduTrack (M5Stack Dial)",
+  "version": "1.0.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    { "chipFamily": "ESP32-S3", "parts": [{ "path": "edutrack-dial-1.0.0.bin", "offset": 0 }] }
+  ]
+}

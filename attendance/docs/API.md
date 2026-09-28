@@ -135,5 +135,17 @@ A browser page for a tablet, iPad, PC or Android phone next to the classroom
 door. It stores the reader token in that browser only (set up by pasting it or
 opening `/kiosk#token=…`; the fragment is never sent to the server), accepts
 keyboard-emulation readers (UID + Enter) and Web NFC on Android Chrome, and
-queues taps while offline (same idempotency key on retry). A queued tap sent
-more than 2 minutes late counts at its arrival time, per the reader clock rule.
+queues taps while offline (same idempotency key on retry). A queued tap keeps
+its original time if it is sent within 12 hours (see the Wi-Fi reader section).
+
+## Wi-Fi reader (M5Stack Dial)
+
+Firmware source: `firmware/edutrack-dial/` (PlatformIO). It calls
+`GET /api/v1/devices/me` at start and every 10 minutes (this also records the
+reader's heartbeat) and `POST /api/v1/attendance/scans` for each card, with
+`scanned_at` from its NTP clock. Taps made without internet are stored in the
+reader's flash and sent later: a reader `scanned_at` up to **12 hours in the
+past** is accepted as the tap time (logged with detail `stored offline`);
+future times, or older ones, fall back to the receipt time. The installable
+image is published at `attendance/public/firmware/edutrack-dial/` and flashed
+from Configuración → Lectores NFC → Instalar lector Wi-Fi (Chrome/Edge, Web Serial).
