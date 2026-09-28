@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseAdminClient } from "@/server/db/supabase-admin";
 import { hashDeviceToken, looksLikeDeviceToken } from "@/server/attendance/tokens";
 
-// GET /api/v1/devices/me — lets a reader (e.g. the /kiosk screen) check its
-// token and learn what to display. Returns only this device's own labels.
+// GET /api/v1/devices/me — lets a reader (the /kiosk screen, the Wi-Fi reader)
+// check its token and learn what to display, and records a heartbeat.
+// Returns only this device's own labels.
 
 function problem(status: number, error: string) {
   return NextResponse.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
@@ -17,11 +18,12 @@ export async function GET(request: NextRequest) {
   const admin = createSupabaseAdminClient();
   const { data: device } = await admin
     .from("devices")
-    .select("name, status, location, class:class_sections(name), school:schools!inner(name, timezone, status)")
+    .select("id, name, status, location, class:class_sections(name), school:schools!inner(name, timezone, status)")
     .eq("token_hash", hashDeviceToken(token))
     .eq("kind", "reader")
     .returns<
       {
+        id: string;
         name: string;
         status: "active" | "disabled";
         location: string | null;
@@ -31,6 +33,9 @@ export async function GET(request: NextRequest) {
     >()
     .maybeSingle();
   if (!device) return problem(401, "invalid_token");
+
+  // Doubles as the reader's heartbeat, so "En línea" works before any tap.
+  await admin.from("devices").update({ last_seen_at: new Date().toISOString() }).eq("id", device.id);
 
   return NextResponse.json(
     {

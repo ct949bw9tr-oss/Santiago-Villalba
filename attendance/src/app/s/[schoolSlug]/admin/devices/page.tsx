@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ChevronDown, Cpu, ExternalLink, MonitorSmartphone, Plus, RadioTower } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
 import { SchoolSlugInput } from "@/components/school-slug-input";
@@ -63,9 +64,14 @@ export default async function DevicesPage({ params }: PageProps<"/s/[schoolSlug]
             <li>Deja la pantalla abierta: muestra “Acerca la tarjeta NFC”.</li>
           </ol>
         </div>
-        <a className="button secondary" href="/kiosk" target="_blank" rel="noopener">
-          <ExternalLink size={15} /> Abrir pantalla de lector
-        </a>
+        <div className="stack-sm">
+          <a className="button secondary" href="/kiosk" target="_blank" rel="noopener">
+            <ExternalLink size={15} /> Abrir pantalla de lector
+          </a>
+          <Link className="button secondary" href={`/s/${schoolSlug}/admin/devices/install`}>
+            <Cpu size={15} /> Instalar lector Wi-Fi
+          </Link>
+        </div>
       </section>
 
       <details className="disclosure card" style={{ padding: 0 }}>

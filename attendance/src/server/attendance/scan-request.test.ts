@@ -13,8 +13,18 @@ describe("effectiveScanTime", () => {
     expect(r).toEqual({ ok: true, effectiveAt: new Date("2026-09-28T12:59:10Z"), detail: null });
   });
 
-  it("ignores a drifting reader clock", () => {
+  it("accepts taps a reader stored while offline (same day), tagged", () => {
     const r = effectiveScanTime("reader", now, "2026-09-28T12:30:00Z");
+    expect(r).toEqual({ ok: true, effectiveAt: new Date("2026-09-28T12:30:00Z"), detail: "stored offline" });
+  });
+
+  it("ignores a reader clock in the future", () => {
+    const r = effectiveScanTime("reader", now, "2026-09-28T13:30:00Z");
+    expect(r).toEqual({ ok: true, effectiveAt: now, detail: "reader clock ignored" });
+  });
+
+  it("ignores reader times older than 12 hours", () => {
+    const r = effectiveScanTime("reader", now, "2026-09-27T23:00:00Z");
     expect(r).toEqual({ ok: true, effectiveAt: now, detail: "reader clock ignored" });
   });
 

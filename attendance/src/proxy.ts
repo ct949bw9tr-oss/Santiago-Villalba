@@ -57,7 +57,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip static assets and the machine API (/api/v1/* authenticates devices
-  // with bearer tokens, not cookies).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/v1/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  // Skip static assets, public reader firmware and the machine API
+  // (/api/v1/* authenticates devices with bearer tokens, not cookies).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/v1/|firmware/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };
